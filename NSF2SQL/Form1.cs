@@ -22,6 +22,7 @@ namespace NSF2SQL
         public Form1()
         {
             InitializeComponent();
+            saveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             treeView1.TreeViewNodeSorter = new NodeSorter();
             //string[] args = Environment.GetCommandLineArgs();//TODO: cmd line args
         }
@@ -154,7 +155,6 @@ namespace NSF2SQL
             long lastTicks = 0;
             string timeLeft = "";
             string timeElapsed = "0:00:00";
-            string filePath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + @"\export.sql";
             string databasePath = treeView1.SelectedNode.Name;
             ProgressDialog pDialog = new ProgressDialog();
             pDialog.Title = "Exporting Documents";
@@ -316,14 +316,30 @@ namespace NSF2SQL
                                 startTicks = DateTime.Now.Ticks;
                                 dump2server(newTables, input.Values["Database"], pDialog, input.Values["Server"], input.Values["Username"], input.Values["Password"]);
                             }
+                            else
+                            {
+                                //TODO:
+                            }
                         }
                         else
                         {
-                            InputBox input = InputBox.Show("Database name?", "Database Name", mysqlDatabase, InputBoxButtons.OK);
-                            if (input.Result == InputBoxResult.OK)
+                            saveFileDialog1.FileName = "export.sql";
+                            if (saveFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                             {
-                                startTicks = DateTime.Now.Ticks;
-                                dump2sql(newTables, filePath, input.Values["Database Name"], pDialog);
+                                InputBox input = InputBox.Show("Database name?", "Database Name", mysqlDatabase, InputBoxButtons.OK);
+                                if (input.Result == InputBoxResult.OK)
+                                {
+                                    startTicks = DateTime.Now.Ticks;
+                                    dump2sql(newTables, saveFileDialog1.FileName, input.Values["Database Name"], pDialog);
+                                }
+                                else
+                                {
+                                    //TODO:
+                                }
+                            }
+                            else
+                            {
+                                //TODO:
                             }
                         }
                     }
@@ -493,10 +509,6 @@ namespace NSF2SQL
                 file.WriteLine("/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;");
                 file.WriteLine("/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;");
                 file.Close();
-
-                System.Threading.Thread.Sleep(100);//to prevent opening the file before write is complete
-
-                System.Diagnostics.Process.Start(filePath);
             }
         }
 

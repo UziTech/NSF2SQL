@@ -35,8 +35,9 @@
             this.bBrowse = new System.Windows.Forms.Button();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.treeView1 = new System.Windows.Forms.TreeView();
-            this.label1 = new System.Windows.Forms.Label();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
+            this.label1 = new System.Windows.Forms.Label();
+            this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.SuspendLayout();
             // 
             // bGetDatabases
@@ -95,6 +96,13 @@
             this.treeView1.TabIndex = 1;
             this.treeView1.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseDoubleClick);
             // 
+            // imageList1
+            // 
+            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
+            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
+            this.imageList1.Images.SetKeyName(0, "database");
+            this.imageList1.Images.SetKeyName(1, "folder");
+            // 
             // label1
             // 
             this.label1.AutoSize = true;
@@ -104,12 +112,11 @@
             this.label1.TabIndex = 5;
             this.label1.Text = "NSF Databases";
             // 
-            // imageList1
+            // saveFileDialog1
             // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "database");
-            this.imageList1.Images.SetKeyName(1, "folder");
+            this.saveFileDialog1.DefaultExt = "sql";
+            this.saveFileDialog1.FileName = "export.sql";
+            this.saveFileDialog1.Filter = "SQL File|*.sql";
             // 
             // Form1
             // 
@@ -139,6 +146,7 @@
         private System.Windows.Forms.TreeView treeView1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ImageList imageList1;
+        private System.Windows.Forms.SaveFileDialog saveFileDialog1;
     }
 }
 
