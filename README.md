@@ -8,3 +8,8 @@ This application finds Lotus Notes applications on a Domino server or local comp
 The tables are forms with each document as a row.
 
 It stored fields with multiple values as separate tables linked with a foreign key.
+
+Tutorial
+========
+
+http://uzitech.github.io/NSF2SQL/
