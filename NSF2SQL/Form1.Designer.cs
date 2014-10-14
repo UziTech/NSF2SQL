@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.bGetDatabases = new System.Windows.Forms.Button();
             this.bExportDocuments = new System.Windows.Forms.Button();
@@ -35,6 +36,7 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.label1 = new System.Windows.Forms.Label();
+            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.SuspendLayout();
             // 
             // bGetDatabases
@@ -75,6 +77,7 @@
             this.openFileDialog1.DefaultExt = "nsf";
             this.openFileDialog1.Filter = "Lotus Notes Database|*.nsf";
             this.openFileDialog1.Multiselect = true;
+            this.openFileDialog1.Title = "Open Lotus Notes Databases (.nsf)";
             // 
             // treeView1
             // 
@@ -82,8 +85,11 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.treeView1.HideSelection = false;
+            this.treeView1.ImageIndex = 0;
+            this.treeView1.ImageList = this.imageList1;
             this.treeView1.Location = new System.Drawing.Point(12, 25);
             this.treeView1.Name = "treeView1";
+            this.treeView1.SelectedImageIndex = 0;
             this.treeView1.ShowNodeToolTips = true;
             this.treeView1.Size = new System.Drawing.Size(380, 226);
             this.treeView1.TabIndex = 1;
@@ -97,6 +103,13 @@
             this.label1.Size = new System.Drawing.Size(82, 13);
             this.label1.TabIndex = 5;
             this.label1.Text = "NSF Databases";
+            // 
+            // imageList1
+            // 
+            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
+            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
+            this.imageList1.Images.SetKeyName(0, "database");
+            this.imageList1.Images.SetKeyName(1, "folder");
             // 
             // Form1
             // 
@@ -125,6 +138,7 @@
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.TreeView treeView1;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ImageList imageList1;
     }
 }
 

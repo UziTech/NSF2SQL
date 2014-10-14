@@ -14,11 +14,16 @@ namespace NSF2SQL
         string notesServer = "";
         string notesDomain = "";
         string notesPassword = "";
+        string mysqlServer = "";
+        string mysqlDatabase = "";
+        string mysqlUsername = "";
+        string mysqlPassword = "";
 
         public Form1()
         {
             InitializeComponent();
-            treeView1.TreeViewNodeSorter = new NodeSorter(); 
+            treeView1.TreeViewNodeSorter = new NodeSorter();
+            //string[] args = Environment.GetCommandLineArgs();//TODO: cmd line args
         }
 
         private class NodeSorter : System.Collections.IComparer
@@ -76,11 +81,11 @@ namespace NSF2SQL
                                         string folder = path[n].ToUpper();
                                         if (!nodes.ContainsKey(folder))
                                         {
-                                            nodes.Add(folder, folder);
+                                            nodes.Add(folder, folder, "folder", "folder");
                                         }
                                         nodes = nodes[folder].Nodes;
                                     }
-                                    nodes.Add(db.FilePath, db.Title);
+                                    nodes.Add(db.FilePath, db.Title, "database", "database");
                                 });
                                 db = directory.GetNextDatabase();
                                 pDialog.ReportProgress(i);
@@ -122,8 +127,8 @@ namespace NSF2SQL
                             onLocalComputer = true;
                             foreach (string file in openFileDialog1.FileNames)
                             {
-                                string name = Path.GetFileNameWithoutExtension(file);
-                                treeView1.Nodes.Add(file, name);
+                                NotesDatabase db = nSession.GetDatabase("", file, false);
+                                treeView1.Nodes.Add(file, db.Title, "database", "database");
                             }
                             treeView1.Sort();
                         }
@@ -133,6 +138,7 @@ namespace NSF2SQL
                 {
                     MessageBox.Show(ex.Message);
                 }
+                openFileDialog1.FileName = "";
             }
         }
 
@@ -304,7 +310,7 @@ namespace NSF2SQL
                         total = newTables.Count;
                         if (MessageBox.Show("Do you want to export to a server?", "Export to a server?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
                         {
-                            InputBox input = InputBox.Show("SQL server info?", new string[] { "Server", "Database", "Username", "Password" }, InputBoxButtons.OK);
+                            InputBox input = InputBox.Show("SQL server info?", new InputBoxItem[] { new InputBoxItem("Server", mysqlServer), new InputBoxItem("Database", mysqlDatabase), new InputBoxItem("Username", mysqlUsername), new InputBoxItem("Password", mysqlPassword, true) }, InputBoxButtons.OK);
                             if (input.Result == InputBoxResult.OK)
                             {
                                 startTicks = DateTime.Now.Ticks;
@@ -313,7 +319,7 @@ namespace NSF2SQL
                         }
                         else
                         {
-                            InputBox input = InputBox.Show("Database name?", "Database Name", InputBoxButtons.OK);
+                            InputBox input = InputBox.Show("Database name?", "Database Name", mysqlDatabase, InputBoxButtons.OK);
                             if (input.Result == InputBoxResult.OK)
                             {
                                 startTicks = DateTime.Now.Ticks;
@@ -362,7 +368,7 @@ namespace NSF2SQL
             {
                 if (!e.Cancelled)
                 {
-                    //System.Diagnostics.Process.Start(filePath);
+                    MessageBox.Show("Completed Successfully");
                 }
             };
             pDialog.Run();
