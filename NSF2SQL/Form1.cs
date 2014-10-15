@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Domino;
 using System.IO;
 using MySql.Data.MySqlClient;
+using System.Text.RegularExpressions;
 
 namespace NSF2SQL
 {
@@ -18,17 +19,179 @@ namespace NSF2SQL
         string mysqlDatabase = "";
         string mysqlUsername = "";
         string mysqlPassword = "";
+        int mysqlNumRowsPerInsert = 1000;
+        //Regex excludeField = new Regex("^(\\$.*|Form|Readers)$");
 
         public Form1()
         {
             InitializeComponent();
             saveFileDialog1.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             treeView1.TreeViewNodeSorter = new NodeSorter();
-            //string[] args = Environment.GetCommandLineArgs();//TODO: cmd line args
+            #region Command Line Arguments
+            string[] args = Environment.GetCommandLineArgs();
+            string notesFile = "";
+            bool showHelp = false;
+            List<string> error = new List<string>();
+            for (int i = 1; i < args.Length; i++)
+            {
+                switch (args[i])
+                {
+                    case "-notesServer":
+                        if (args.Length > i + 1)
+                        {
+                            notesServer = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -notesServer");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-notesDomain":
+                        if (args.Length > i + 1)
+                        {
+                            notesDomain = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -notesDomain");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-notesPassword":
+                        if (args.Length > i + 1)
+                        {
+                            notesPassword = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -notesPassword");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-mysqlServer":
+                        if (args.Length > i + 1)
+                        {
+                            mysqlServer = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -mysqlServer");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-mysqlDatabase":
+                        if (args.Length > i + 1)
+                        {
+                            mysqlDatabase = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -mysqlDatabase");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-mysqlUsername":
+                        if (args.Length > i + 1)
+                        {
+                            mysqlUsername = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -mysqlUsername");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-mysqlPassword":
+                        if (args.Length > i + 1)
+                        {
+                            mysqlPassword = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -mysqlPassword");
+                            showHelp = true;
+                        }
+                        break;
+                    case "-notesFile":
+                        if (args.Length > i + 1)
+                        {
+                            notesFile = args[++i];
+                        }
+                        else
+                        {
+                            error.Add("Need argument after -notesFile");
+                            showHelp = true;
+                        }
+                        break;
+                    case "/?":
+                    case "-?":
+                    case "/help":
+                    case "-help":
+                        showHelp = true;
+                        break;
+                    default:
+                        error.Add(args[i] + " is not a valid argument.");
+                        showHelp = true;
+                        break;
+                }
+            }
+            if (notesFile != "")
+            {
+                try
+                {
+                    NotesSession nSession = initSession(notesPassword);
+                    NotesDatabase db;
+                    if (File.Exists(notesFile) || (notesServer == "" && notesDomain == ""))
+                    {
+                        db = nSession.GetDatabase("", notesFile, false);
+                        onLocalComputer = true;
+                    }
+                    else
+                    {
+                        db = nSession.GetDatabase(notesServer + "//" + notesDomain, notesFile, false);
+                        onLocalComputer = false;
+                    }
+                    treeView1.Nodes.Add(db.FilePath, db.Title, "database", "database");
+                }
+                catch (Exception ex)
+                {
+                    error.Add("Error loading -notesFile: " + ex.Message);
+                }
+            }
+            if (showHelp)
+            {
+                string argString =
+                    "Arguments:\n" +
+                    "\n" +
+                    "-notesServer: The Domino server name\n" +
+                    "-notesDomain: The Domino server domain\n" +
+                    "-notesPassword: The password for Lotus Notes\n" +
+                    "-notesFile: The file path to the nsf database\n" +
+                    "-mysqlDatabase: The database name for the exported documents\n" +
+                    "-mysqlServer: The mysql server address or IP address\n" +
+                    "-mysqlUsername: The username for the mysql server\n" +
+                    "-mysqlPassword: The password for the mysql server\n" +
+                    "\n" +
+                    "Examples:\n" +
+                    "\n" +
+                    "nsf2sql.exe -notesServer domino -notesDomain company -notesPassword \"your password\" -notesFile banner.nsf -mysqlDatabase banner_nsf";
+                if (error.Count > 0)
+                {
+                    string messageText = "Errors:\n\n" + String.Join("\n\n", error);
+                    messageText += "\n\n" + argString;
+                    MessageBox.Show(messageText, "NSF2SQL Command Line Arguments", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    MessageBox.Show(argString, "NSF2SQL Command Line Arguments", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            #endregion
         }
 
         private class NodeSorter : System.Collections.IComparer
-        { 
+        {
             //sort by hasChildNodes first then alphabetically
             public int Compare(object a, object b)
             {
@@ -46,16 +209,16 @@ namespace NSF2SQL
             }
         }
 
-        private void bGetDatabases_Click(object sender, EventArgs ea)
+        private void bSearchServer_Click(object sender, EventArgs ea)
         {
             treeView1.Nodes.Clear();
             onLocalComputer = false;
             InputBox input = InputBox.Show("Domino Server", new InputBoxItem[] { new InputBoxItem("Server", notesServer), new InputBoxItem("Domain", notesDomain), new InputBoxItem("Password", notesPassword, true) }, InputBoxButtons.OKCancel);
             if (input.Result == InputBoxResult.OK)
             {
-                notesServer = input.Values["Server"];
-                notesDomain = input.Values["Domain"];
-                notesPassword = input.Values["Password"];
+                notesServer = input.Items["Server"];
+                notesDomain = input.Items["Domain"];
+                notesPassword = input.Items["Password"];
 
                 ProgressDialog pDialog = new ProgressDialog();
                 pDialog.Title = "Get Databases";
@@ -66,32 +229,34 @@ namespace NSF2SQL
                     {
                         NotesSession nSession = initSession(notesPassword);
                         pDialog.ReportProgress(0);
-                        if (nSession != null)
+                        NotesDbDirectory directory = nSession.GetDbDirectory(notesServer + "//" + notesDomain);
+                        NotesDatabase db = directory.GetFirstDatabase(DB_TYPES.DATABASE);
+                        int i = 0;
+                        while (db != null)
                         {
-                            NotesDbDirectory directory = nSession.GetDbDirectory(notesServer + "//" + notesDomain);
-                            NotesDatabase db = directory.GetFirstDatabase(DB_TYPES.DATABASE);
-                            int i = 0;
-                            while (db != null && !pDialog.Cancelled)
+                            if (pDialog.IsCancelled)
                             {
-                                string[] path = db.FilePath.Split(new char[] { '\\' });
-                                treeView1.Invoke((MethodInvoker)delegate()
-                                {
-                                    TreeNodeCollection nodes = treeView1.Nodes;
-                                    for (int n = 0; n < path.Length - 1; n++)
-                                    {
-                                        string folder = path[n].ToUpper();
-                                        if (!nodes.ContainsKey(folder))
-                                        {
-                                            nodes.Add(folder, folder, "folder", "folder");
-                                        }
-                                        nodes = nodes[folder].Nodes;
-                                    }
-                                    nodes.Add(db.FilePath, db.Title, "database", "database");
-                                });
-                                db = directory.GetNextDatabase();
-                                pDialog.ReportProgress(i);
-                                i++;
+                                e.Cancel = true;
+                                return;
                             }
+                            string[] path = db.FilePath.Split(new char[] { '\\' });
+                            treeView1.Invoke((MethodInvoker)delegate()
+                            {
+                                TreeNodeCollection nodes = treeView1.Nodes;
+                                for (int n = 0; n < path.Length - 1; n++)
+                                {
+                                    string folder = path[n].ToUpper();
+                                    if (!nodes.ContainsKey(folder))
+                                    {
+                                        nodes.Add(folder, folder, "folder", "folder");
+                                    }
+                                    nodes = nodes[folder].Nodes;
+                                }
+                                nodes.Add(db.FilePath, db.Title, "database", "database");
+                            });
+                            db = directory.GetNextDatabase();
+                            pDialog.ReportProgress(i);
+                            i++;
                         }
                     }
                     catch (Exception ex)
@@ -105,13 +270,23 @@ namespace NSF2SQL
                 };
                 pDialog.Completed += delegate(object dialog, RunWorkerCompletedEventArgs e)
                 {
-                    treeView1.Invoke((MethodInvoker)delegate() { treeView1.Sort(); });
+                    //treeView1.Invoke((MethodInvoker)delegate()
+                    //{
+                    if (e.Cancelled)
+                    {
+                        treeView1.Nodes.Clear();
+                    }
+                    else
+                    {
+                        treeView1.Sort();
+                    }
+                    //});
                 };
                 pDialog.Run();
             }
         }
 
-        private void bBrowse_Click(object sender, EventArgs e)
+        private void bSearchComputer_Click(object sender, EventArgs e)
         {
             if (openFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
@@ -121,18 +296,15 @@ namespace NSF2SQL
                     InputBox input = InputBox.Show("Lotus Notes Password", new InputBoxItem("Password", notesPassword, true), InputBoxButtons.OKCancel);
                     if (input.Result == InputBoxResult.OK)
                     {
-                        notesPassword = input.Values["Password"];
+                        notesPassword = input.Items["Password"];
                         NotesSession nSession = initSession(notesPassword);
-                        if (nSession != null)
+                        onLocalComputer = true;
+                        foreach (string file in openFileDialog1.FileNames)
                         {
-                            onLocalComputer = true;
-                            foreach (string file in openFileDialog1.FileNames)
-                            {
-                                NotesDatabase db = nSession.GetDatabase("", file, false);
-                                treeView1.Nodes.Add(file, db.Title, "database", "database");
-                            }
-                            treeView1.Sort();
+                            NotesDatabase db = nSession.GetDatabase("", file, false);
+                            treeView1.Nodes.Add(file, db.Title, "database", "database");
                         }
+                        treeView1.Sort();
                     }
                 }
                 catch (Exception ex)
@@ -158,197 +330,316 @@ namespace NSF2SQL
             string databasePath = treeView1.SelectedNode.Name;
             ProgressDialog pDialog = new ProgressDialog();
             pDialog.Title = "Exporting Documents";
+            #region Export Documents
             pDialog.DoWork += delegate(object dialog, DoWorkEventArgs e)
             {
                 try
                 {
                     //export documents
                     NotesSession nSession = initSession(notesPassword);
-                    if (nSession != null)
+                    Dictionary<string, Table> tables = new Dictionary<string, Table>();
+
+                    NotesDatabase db;
+                    if (onLocalComputer)
                     {
-                        Dictionary<string, Table> tables = new Dictionary<string, Table>();
+                        db = nSession.GetDatabase("", databasePath, false);
+                    }
+                    else
+                    {
+                        db = nSession.GetDatabase(notesServer + "//" + notesDomain, databasePath, false);
+                    }
+                    //get all documents
+                    total = db.AllDocuments.Count;
+                    NotesDocumentCollection allDocuments = db.AllDocuments;
+                    NotesDocument doc = allDocuments.GetFirstDocument();
+                    startTicks = DateTime.Now.Ticks;
+                    for (int i = 0; i < total; i++)
+                    {
+                        //check if cancelled
+                        if (pDialog.IsCancelled)
+                        {
+                            e.Cancel = true;
+                            return;
+                        }
+                        if (doc.HasItem("Form") && (string)doc.GetItemValue("Form")[0] != "")
+                        {
+                            //get form
+                            string form = (string)doc.GetItemValue("Form")[0];
 
-                        NotesDatabase db;
-                        if (onLocalComputer)
-                        {
-                            db = nSession.GetDatabase("", databasePath, false);
-                        }
-                        else
-                        {
-                            db = nSession.GetDatabase(notesServer + "//" + notesDomain, databasePath, false);
-                        }
-                        //get all documents
-                        total = db.AllDocuments.Count;
-                        NotesDocumentCollection allDocuments = db.AllDocuments;
-                        NotesDocument doc = allDocuments.GetFirstDocument();
-                        startTicks = DateTime.Now.Ticks;
-                        for (int i = 0; i < total; i++)
-                        {
-                            //check if cancelled
-                            if (pDialog.Cancelled)
+                            if (!tables.ContainsKey(form))
                             {
-                                e.Cancel = true;
-                                return;
+                                tables.Add(form, new Table(form));
                             }
-                            if (doc.HasItem("Form") && (string)doc.GetItemValue("Form")[0] != "")
+                            int row = tables[form].AddRow();
+                            //get fields
+                            //set multiple values
+                            foreach (NotesItem item in doc.Items)
                             {
-                                //get form
-                                string form = (string)doc.GetItemValue("Form")[0];
-
-                                if (!tables.ContainsKey(form))
+                                //check if cancelled
+                                if (pDialog.IsCancelled)
                                 {
-                                    tables.Add(form, new Table(form));
+                                    e.Cancel = true;
+                                    return;
                                 }
-                                int row = tables[form].AddRow();
-                                //get fields
-                                //set multiple values
-                                foreach (NotesItem item in doc.Items)
+                                string field = item.Name;
+                                //exclude fields that start with $ and the Form field and Readers field
+                                //if (excludeField.IsMatch(field))
+                                //{
+                                //    continue;
+                                //}
+                                string type = "";
+                                switch (item.type)
+                                {//TODO: get more types
+                                    case IT_TYPE.NUMBERS:
+                                        type = "int";
+                                        break;
+                                    case IT_TYPE.DATETIMES:
+                                        type = "datetime";
+                                        break;
+                                    default:
+                                        type = "text";
+                                        break;
+                                }
+                                object values = item.Values;
+                                bool multiple = item.Values.Length > 1;
+
+                                if (!tables[form].Columns.ContainsKey(field))
                                 {
-                                    string field = item.Name;
-                                    //exclude fields that start with $ and the Form field
-                                    if (field.StartsWith("$") || field == "Form")
+                                    tables[form].Columns.Add(field, new Column(field, type));
+                                }
+
+                                if (multiple && !tables[form].Columns[field].MultipleValues)
+                                {
+                                    tables[form].Columns[field].MultipleValues = multiple;
+                                }
+
+                                tables[form].Columns[field].Values.Add(row, values);
+
+                            }
+                        }
+                        //update progress
+                        pDialog.ReportProgress(i, "Parsing Documents");
+                        doc = allDocuments.GetNextDocument(doc);
+                    }
+                    //add tables for columns with multiple values
+                    Dictionary<string, Table> newTables = new Dictionary<string, Table>(tables.Count);
+                    lastTicks = 0;
+                    startTicks = DateTime.Now.Ticks;
+                    total = tables.Count;
+                    int count = 0;
+                    foreach (Table table in tables.Values)
+                    {
+                        //check if cancelled
+                        if (pDialog.IsCancelled)
+                        {
+                            e.Cancel = true;
+                            return;
+                        }
+                        pDialog.ReportProgress(++count, "Formatting Tables");
+                        Dictionary<string, Column> columns = new Dictionary<string, Column>(table.Columns);
+                        foreach (Column column in columns.Values)
+                        {
+                            if (column.MultipleValues)
+                            {
+                                string tableName = table.Name + "_" + column.Name;
+                                Table newTable = new Table(tableName, table.Name);
+                                Column values = new Column(column.Name, column.Type);
+                                Column ids = new Column(table.Name + "id", "int");
+                                foreach (KeyValuePair<int, object> cell in column.Values)
+                                {
+                                    //check if cancelled
+                                    if (pDialog.IsCancelled)
                                     {
-                                        continue;
+                                        e.Cancel = true;
+                                        return;
                                     }
-                                    string type = "";
-                                    switch (item.type)
-                                    {//TODO: get more types
-                                        case IT_TYPE.NUMBERS:
-                                            type = "int";
-                                            break;
-                                        default:
-                                            type = "text";
-                                            break;
-                                    }
-                                    object values = item.Values;
-                                    bool multiple = item.Values.Length > 1;
-
-                                    if (!tables[form].Columns.ContainsKey(field))
+                                    int id = cell.Key;
+                                    object[] valueArray;
+                                    if (cell.Value.GetType().IsArray)
                                     {
-                                        tables[form].Columns.Add(field, new Column(field, type));
+                                        valueArray = (object[])cell.Value;
                                     }
-
-                                    if (multiple && !tables[form].Columns[field].MultipleValues)
+                                    else
                                     {
-                                        tables[form].Columns[field].MultipleValues = multiple;
+                                        valueArray = new object[] { cell.Value };
                                     }
-
-                                    tables[form].Columns[field].Values.Add(row, values);
-
+                                    foreach (object value in valueArray)
+                                    {
+                                        //check if cancelled
+                                        if (pDialog.IsCancelled)
+                                        {
+                                            e.Cancel = true;
+                                            return;
+                                        }
+                                        int row = newTable.AddRow();
+                                        ids.Values.Add(row, id);
+                                        values.Values.Add(row, value);
+                                    }
+                                }
+                                newTable.Columns.Add(table.Name + "id", ids);
+                                newTable.Columns.Add(column.Name, values);
+                                newTables.Add(tableName, newTable);
+                                table.Columns.Remove(column.Name);
+                            }
+                            else
+                            {
+                                Dictionary<int, object> values = new Dictionary<int, object>(column.Values);
+                                foreach (KeyValuePair<int, object> cell in values)
+                                {
+                                    //check if cancelled
+                                    if (pDialog.IsCancelled)
+                                    {
+                                        e.Cancel = true;
+                                        return;
+                                    }
+                                    int id = cell.Key;
+                                    object value;
+                                    if (cell.Value.GetType().IsArray)
+                                    {
+                                        object[] valueArray = (object[])cell.Value;
+                                        value = valueArray.GetValue(0);
+                                    }
+                                    else
+                                    {
+                                        value = cell.Value;
+                                    }
+                                    column.Values[id] = value;
                                 }
                             }
-                            //update progress
-                            pDialog.ReportProgress(i, "Parsing Documents");
-                            doc = allDocuments.GetNextDocument(doc);
                         }
-                        //add tables for columns with multiple values
-                        Dictionary<string, Table> newTables = new Dictionary<string, Table>(tables.Count);
+                        newTables.Add(table.Name, table);
+                    }
+                    //format to sql
+                    total = newTables.Count;
+                    bool complete = false;
+                    do
+                    {
                         lastTicks = 0;
-                        startTicks = DateTime.Now.Ticks;
-                        total = tables.Count;
-                        int count = 0;
-                        foreach (Table table in tables.Values)
+                        count = 0;
+                        DialogResult result = DialogResult.Cancel;
+                        Invoke((MethodInvoker)delegate() { result = MessageBox.Show(pDialog.Window, "Do you want to export to a MySQL server?", "Export to a server?", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1); });
+                        if (result == DialogResult.Yes)
                         {
-                            pDialog.ReportProgress(++count, "Formatting Tables");
-                            Dictionary<string, Column> columns = new Dictionary<string, Column>(table.Columns);
-                            foreach (Column column in columns.Values)
-                            {
-                                if (column.MultipleValues)
-                                {
-                                    string tableName = table.Name + "_" + column.Name;
-                                    Table newTable = new Table(tableName, table.Name);
-                                    Column values = new Column(column.Name, column.Type);
-                                    Column ids = new Column(table.Name + "id", "int");
-                                    foreach (KeyValuePair<int, object> cell in column.Values)
-                                    {
-                                        int id = cell.Key;
-                                        object[] valueArray;
-                                        if (cell.Value.GetType().IsArray)
-                                        {
-                                            valueArray = (object[])cell.Value;
-                                        }
-                                        else
-                                        {
-                                            valueArray = new object[] { cell.Value };
-                                        }
-                                        foreach (object value in valueArray)
-                                        {
-                                            int row = newTable.AddRow();
-                                            ids.Values.Add(row, id);
-                                            values.Values.Add(row, value);
-                                        }
-                                    }
-                                    newTable.Columns.Add(table.Name + "id", ids);
-                                    newTable.Columns.Add(column.Name, values);
-                                    newTables.Add(tableName, newTable);
-                                    table.Columns.Remove(column.Name);
-                                }
-                                else
-                                {
-                                    Dictionary<int, object> values = new Dictionary<int, object>(column.Values);
-                                    foreach (KeyValuePair<int, object> cell in values)
-                                    {
-                                        int id = cell.Key;
-                                        object value;
-                                        if (cell.Value.GetType().IsArray)
-                                        {
-                                            object[] valueArray = (object[])cell.Value;
-                                            value = valueArray.GetValue(0);
-                                        }
-                                        else
-                                        {
-                                            value = cell.Value;
-                                        }
-                                        column.Values[id] = value;
-                                    }
-                                }
-                            }
-                            newTables.Add(table.Name, table);
-                        }
-                        //format to sql
-                        lastTicks = 0;
-                        total = newTables.Count;
-                        if (MessageBox.Show("Do you want to export to a server?", "Export to a server?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
-                        {
-                            InputBox input = InputBox.Show("SQL server info?", new InputBoxItem[] { new InputBoxItem("Server", mysqlServer), new InputBoxItem("Database", mysqlDatabase), new InputBoxItem("Username", mysqlUsername), new InputBoxItem("Password", mysqlPassword, true) }, InputBoxButtons.OK);
+                            InputBox input = null;
+                            Invoke((MethodInvoker)delegate() { input = InputBox.Show(pDialog.Window, "SQL server info?", new InputBoxItem[] { new InputBoxItem("Server", mysqlServer), new InputBoxItem("Database", mysqlDatabase), new InputBoxItem("Username", mysqlUsername), new InputBoxItem("Password", mysqlPassword, true), new InputBoxItem("Number of rows per INSERT", mysqlNumRowsPerInsert.ToString()) }, InputBoxButtons.OKCancel); });
                             if (input.Result == InputBoxResult.OK)
                             {
-                                startTicks = DateTime.Now.Ticks;
-                                dump2server(newTables, input.Values["Database"], pDialog, input.Values["Server"], input.Values["Username"], input.Values["Password"]);
+                                mysqlServer = input.Items["Server"];
+                                mysqlDatabase = input.Items["Database"];
+                                mysqlUsername = input.Items["Username"];
+                                mysqlPassword = input.Items["Password"];
+                                int.TryParse(input.Items["Number of rows per INSERT"], out mysqlNumRowsPerInsert);
+
+                                MySqlConnection conn = new MySqlConnection("SERVER=" + mysqlServer + ";USERNAME=" + mysqlUsername + ";PASSWORD=" + mysqlPassword + ";");
+
+                                try
+                                {
+                                    startTicks = DateTime.Now.Ticks;
+                                    conn.Open();
+
+                                    MySqlCommand command = conn.CreateCommand();
+                                    command.CommandText = createDatabase(mysqlDatabase);
+
+                                    command.ExecuteNonQuery();
+                                    foreach (Table table in newTables.Values)
+                                    {
+                                        //check if cancelled
+                                        if (pDialog.IsCancelled)
+                                        {
+                                            e.Cancel = true;
+                                            return;
+                                        }
+                                        pDialog.ReportProgress(++count, "Inserting SQL");
+                                        if (table.Columns.Count > 0)
+                                        {
+                                            command.CommandText = createTable(table);
+                                            command.ExecuteNonQuery();
+                                            List<string> rows = insertTableRows(table);
+                                            for (int i = 0; i < rows.Count; i += mysqlNumRowsPerInsert)
+                                            {
+                                                command.CommandText = beginInsertTable(table);
+                                                command.CommandText += String.Join(",\n", rows.GetRange(i, Math.Min(rows.Count - i, mysqlNumRowsPerInsert))) + ";\n";
+                                                command.CommandText += endInsertTable(table);
+                                                command.ExecuteNonQuery();
+                                            }
+                                        }
+                                    }
+                                    command.CommandText = restoreVariables();
+                                    command.ExecuteNonQuery();
+                                    complete = true;
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show(ex.Message);
+                                }
+                                finally
+                                {
+                                    conn.Close();
+                                }
                             }
-                            else
+                        }
+                        else if (result == DialogResult.No)
+                        {
+                            saveFileDialog1.FileName = "export.sql";
+                            result = DialogResult.Cancel;
+                            Invoke((MethodInvoker)delegate() { result = saveFileDialog1.ShowDialog(pDialog.Window); });
+                            if (result == DialogResult.OK)
                             {
-                                //TODO:
+                                InputBox input = null;
+                                Invoke((MethodInvoker)delegate() { input = InputBox.Show(pDialog.Window, "Database name?", "Database Name", mysqlDatabase, InputBoxButtons.OKCancel); });
+                                if (input.Result == InputBoxResult.OK)
+                                {
+                                    mysqlDatabase = input.Items["Database Name"];
+                                    StreamWriter file = new StreamWriter(saveFileDialog1.FileName, false);
+                                    try
+                                    {
+                                        startTicks = DateTime.Now.Ticks;
+                                        file.WriteLine(createDatabase(mysqlDatabase));
+                                        foreach (Table table in newTables.Values)
+                                        {
+                                            //check if cancelled
+                                            if (pDialog.IsCancelled)
+                                            {
+                                                e.Cancel = true;
+                                                return;
+                                            }
+                                            pDialog.ReportProgress(++count, "Formatting SQL");
+                                            if (table.Columns.Count > 0)
+                                            {
+                                                file.WriteLine(createTable(table));
+                                                file.WriteLine(beginInsertTable(table));
+                                                file.WriteLine(String.Join(",\n", insertTableRows(table)) + ";");
+                                                file.WriteLine(endInsertTable(table));
+                                            }
+                                        }
+                                        file.WriteLine(restoreVariables());
+                                        complete = true;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        MessageBox.Show(ex.Message);
+                                    }
+                                    finally
+                                    {
+                                        file.Close();
+                                    }
+                                }
                             }
                         }
                         else
                         {
-                            saveFileDialog1.FileName = "export.sql";
-                            if (saveFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                            {
-                                InputBox input = InputBox.Show("Database name?", "Database Name", mysqlDatabase, InputBoxButtons.OK);
-                                if (input.Result == InputBoxResult.OK)
-                                {
-                                    startTicks = DateTime.Now.Ticks;
-                                    dump2sql(newTables, saveFileDialog1.FileName, input.Values["Database Name"], pDialog);
-                                }
-                                else
-                                {
-                                    //TODO:
-                                }
-                            }
-                            else
-                            {
-                                //TODO:
-                            }
+                            e.Cancel = true;
+                            return;
                         }
-                    }
+                    } while (!complete);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
+                    e.Cancel = true;
                 }
             };
+            #endregion
             pDialog.ProgressChanged += delegate(object dialog, ProgressChangedEventArgs e)
             {
                 if (lastTicks == 0)
@@ -390,6 +681,161 @@ namespace NSF2SQL
             pDialog.Run();
         }
 
+        private void treeView1_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (treeView1.SelectedNode.Nodes.Count == 0)
+            {
+                bExportDocuments_Click(sender, e);
+            }
+        }
+
+        private string createDatabase(string databaseName)
+        {
+            string query =
+                "DROP DATABASE IF EXISTS `" + databaseName + "`;\n" +
+                "\n" +
+                "CREATE DATABASE `" + databaseName + "`;\n" +
+                "USE `" + databaseName + "`;\n" +
+                "\n" +
+                "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n" +
+                "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;\n" +
+                "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;\n" +
+                "/*!40101 SET NAMES utf8 */;\n" +
+                "/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;\n" +
+                "/*!40103 SET TIME_ZONE='+00:00' */;\n" +
+                "/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;\n" +
+                "/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;\n" +
+                "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n" +
+                "/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;\n";
+            return query;
+        }
+
+        private string createTable(Table table)
+        {
+            string query =
+                "CREATE TABLE `" + table.Name + "` (\n" +
+                "`id` INT NOT NULL,\n";
+            foreach (Column column in table.Columns.Values)
+            {
+                query += "`" + column.Name + "` " + column.Type + " NULL,\n";
+            }
+            query += "PRIMARY KEY (`id`)";
+            if (table.LinkedTable != null)
+            {
+                query +=
+                    ",\n" +
+                    "KEY `" + table.Name + "_idx` (`" + table.LinkedTable + "id`),\n" +
+                    "CONSTRAINT `" + table.Name + "` FOREIGN KEY (`" + table.LinkedTable + "id`) REFERENCES `" + table.LinkedTable + "` (`id`) ON DELETE CASCADE ON UPDATE CASCADE";
+            }
+            query += ");\n";
+            return query;
+        }
+
+        private string beginInsertTable(Table table)
+        {
+
+            string query =
+                "LOCK TABLES `" + table.Name + "` WRITE;\n" +
+                "/*!40000 ALTER TABLE `" + table.Name + "` DISABLE KEYS */;\n" +
+                "INSERT INTO `" + table.Name + "` (`id`,`" + String.Join("`,`", table.Columns.Keys) + "`) VALUES";
+            return query;
+        }
+
+        private List<string> insertTableRows(Table table)
+        {
+            List<string> rows = new List<string>(table.RowCount);
+            for (int i = 0; i < table.RowCount; i++)
+            {
+                List<string> columnValues = new List<string>(table.Columns.Count);
+                foreach (Column column in table.Columns.Values)
+                {
+                    if (column.Values.ContainsKey(i + 1))
+                    {
+                        if (column.Values[i + 1] != null)
+                        {
+                            string value = column.Values[i + 1].ToString();
+                            switch (column.Type)
+                            {
+                                case "int":
+                                    if (value == "")
+                                    {
+                                        value = "NULL";
+                                    }
+                                    else if (value == "Infinity")
+                                    {
+                                        value = int.MaxValue.ToString();
+                                    }
+                                    else
+                                    {
+                                        int temp;
+                                        if (!int.TryParse(value, out temp))
+                                        {
+                                            value = "NULL";
+                                        }
+                                    }
+                                    break;
+                                case "datetime":
+                                    if (value == "")
+                                    {
+                                        value = "NULL";
+                                    }
+                                    else
+                                    {
+                                        DateTime temp;
+                                        if (DateTime.TryParse(value, out temp))
+                                        {
+                                            value = ((DateTime)column.Values[i + 1]).ToString("yyyy-MM-dd HH:mm:ss");
+                                            value = "'" + value + "'";
+                                        }
+                                        else
+                                        {
+                                            value = "NULL";
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    value = "'" + value.ToString().Replace("'", "\\'") + "'";
+                                    break;
+                            }
+                            columnValues.Add(value);
+                        }
+                        else
+                        {
+                            columnValues.Add("NULL");
+                        }
+                    }
+                    else
+                    {
+                        columnValues.Add("NULL");
+                    }
+                }
+                rows.Add("(" + (i + 1) + "," + String.Join(",", columnValues) + ")");
+            }
+            return rows;
+        }
+
+        private string endInsertTable(Table table)
+        {
+            string query =
+                "/*!40000 ALTER TABLE `" + table.Name + "` ENABLE KEYS */;\n" +
+                "UNLOCK TABLES;\n";
+            return query;
+        }
+
+        private string restoreVariables()
+        {
+            string query =
+                "/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;\n" +
+                "/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;\n" +
+                "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n" +
+                "/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;\n" +
+                "/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;\n" +
+                "/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;\n" +
+                "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;\n" +
+                "/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;\n";
+            return query;
+        }
+
         private string ticksToString(long ticks)
         {
             long seconds = ticks / 10000000;
@@ -400,359 +846,11 @@ namespace NSF2SQL
             return (hours > 0 ? hours + ":" : "") + (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
         }
 
-        private void dump2sql(Dictionary<string, Table> newTables, string filePath, string databaseName, ProgressDialog pDialog)
-        {
-            using (StreamWriter file = new StreamWriter(filePath, false))
-            {
-                int count = 0;
-                file.WriteLine("DROP DATABASE IF EXISTS `" + databaseName + "`;");
-                file.WriteLine();
-                file.WriteLine("CREATE DATABASE `" + databaseName + "`;");
-                file.WriteLine("USE `" + databaseName + "`;");
-                file.WriteLine();
-                file.WriteLine("/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;");
-                file.WriteLine("/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;");
-                file.WriteLine("/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;");
-                file.WriteLine("/*!40101 SET NAMES utf8 */;");
-                file.WriteLine("/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;");
-                file.WriteLine("/*!40103 SET TIME_ZONE='+00:00' */;");
-                file.WriteLine("/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;");
-                file.WriteLine("/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;");
-                file.WriteLine("/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;");
-                file.WriteLine("/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;");
-                file.WriteLine();
-                foreach (Table table in newTables.Values)
-                {
-                    pDialog.ReportProgress(++count, "Formatting SQL");
-                    if (table.Columns.Count > 0)
-                    {
-                        file.WriteLine("CREATE TABLE `" + table.Name + "` (");
-                        file.WriteLine("`id` INT NOT NULL,");
-                        foreach (Column column in table.Columns.Values)
-                        {
-                            file.WriteLine("`" + column.Name + "` " + column.Type + " NULL,");
-                        }
-                        file.Write("PRIMARY KEY (`id`)");
-                        if (table.LinkedTable != null)
-                        {
-                            file.WriteLine(",");
-                            file.WriteLine("KEY `" + table.Name + "_idx` (`" + table.LinkedTable + "id`),");
-                            file.Write("CONSTRAINT `" + table.Name + "` FOREIGN KEY (`" + table.LinkedTable + "id`) REFERENCES `" + table.LinkedTable + "` (`id`) ON DELETE CASCADE ON UPDATE CASCADE");
-                        }
-                        file.WriteLine(");");
-                        file.WriteLine();
-                        file.WriteLine("LOCK TABLES `" + table.Name + "` WRITE;");
-                        file.WriteLine("/*!40000 ALTER TABLE `" + table.Name + "` DISABLE KEYS */;");
-                        file.WriteLine("INSERT INTO `" + table.Name + "` (`id`,`" + String.Join("`,`", table.Columns.Keys) + "`) VALUES ");
-                        List<string> rows = new List<string>(table.RowCount);
-                        for (int i = 0; i < table.RowCount; i++)
-                        {
-                            List<string> columnValues = new List<string>(table.Columns.Count);
-                            foreach (Column column in table.Columns.Values)
-                            {
-                                if (column.Values.ContainsKey(i + 1))
-                                {
-                                    if (column.Values[i + 1] != null)
-                                    {
-                                        string value = column.Values[i + 1].ToString();
-                                        switch (column.Type)
-                                        {
-                                            case "int":
-                                                if (value == "")
-                                                {
-                                                    value = "NULL";
-                                                }
-                                                else if (value == "Infinity")
-                                                {
-                                                    value = int.MaxValue.ToString();
-                                                }
-                                                else
-                                                {
-                                                    int temp;
-                                                    if (!int.TryParse(value, out temp))
-                                                    {
-                                                        value = "NULL";
-                                                    }
-                                                }
-                                                columnValues.Add(value);
-                                                break;
-                                            default:
-                                                value = value.ToString().Replace("'", "\\'");
-                                                columnValues.Add("'" + value + "'");
-                                                break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        columnValues.Add("NULL");
-                                    }
-                                }
-                                else
-                                {
-                                    columnValues.Add("NULL");
-                                }
-                            }
-                            rows.Add("(" + (i + 1) + "," + String.Join(",", columnValues) + ")");
-                        }
-                        file.WriteLine(String.Join(",\n", rows) + ";");
-                        file.WriteLine("/*!40000 ALTER TABLE `" + table.Name + "` ENABLE KEYS */;");
-                        file.WriteLine("UNLOCK TABLES;");
-                        file.WriteLine();
-                    }
-                }
-                file.WriteLine("/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;");
-                file.WriteLine("/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;");
-                file.WriteLine("/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;");
-                file.WriteLine("/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;");
-                file.WriteLine("/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;");
-                file.WriteLine("/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;");
-                file.WriteLine("/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;");
-                file.WriteLine("/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;");
-                file.Close();
-            }
-        }
-
-        private void dump2server(Dictionary<string, Table> newTables, string databaseName, ProgressDialog pDialog, string server, string username, string password)
-        {
-            //TODO: max_allowed_packet might cause error
-            using (MySqlConnection conn = new MySqlConnection("SERVER=" + server + ";USERNAME=" + username + ";PASSWORD=" + password + ";"))
-            {
-                conn.Open();
-
-                int count = 0;
-                MySqlCommand command = conn.CreateCommand();
-                command.CommandText = "DROP DATABASE IF EXISTS `" + databaseName + "`;";
-
-                command.CommandText += "CREATE DATABASE `" + databaseName + "`;";
-                command.CommandText += "USE `" + databaseName + "`;";
-
-                command.CommandText += "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;";
-                command.CommandText += "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;";
-                command.CommandText += "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;";
-                command.CommandText += "/*!40101 SET NAMES utf8 */;";
-                command.CommandText += "/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;";
-                command.CommandText += "/*!40103 SET TIME_ZONE='+00:00' */;";
-                command.CommandText += "/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;";
-                command.CommandText += "/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;";
-                command.CommandText += "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;";
-                command.CommandText += "/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;";
-
-                command.ExecuteNonQuery();
-                foreach (Table table in newTables.Values)
-                {
-                    if (table.Columns.Count > 0)
-                    {
-                        pDialog.ReportProgress(++count, "Inserting SQL");
-                        command.CommandText = "CREATE TABLE `" + table.Name + "` (";
-                        command.CommandText += "`id` INT NOT NULL,";
-                        foreach (Column column in table.Columns.Values)
-                        {
-                            command.CommandText += "`" + column.Name + "` " + column.Type + " NULL,";
-                        }
-                        command.CommandText += "PRIMARY KEY (`id`)";
-                        if (table.LinkedTable != null)
-                        {
-                            command.CommandText += ",";
-                            command.CommandText += "KEY `" + table.Name + "_idx` (`" + table.LinkedTable + "id`),";
-                            command.CommandText += "CONSTRAINT `" + table.Name + "` FOREIGN KEY (`" + table.LinkedTable + "id`) REFERENCES `" + table.LinkedTable + "` (`id`) ON DELETE CASCADE ON UPDATE CASCADE";
-                        }
-                        command.CommandText += ");";
-                        command.ExecuteNonQuery();
-
-                        command.CommandText = "LOCK TABLES `" + table.Name + "` WRITE;";
-                        command.CommandText += "/*!40000 ALTER TABLE `" + table.Name + "` DISABLE KEYS */;";
-                        command.CommandText += "INSERT INTO `" + table.Name + "` (`id`,`" + String.Join("`,`", table.Columns.Keys) + "`) VALUES ";
-                        List<string> rows = new List<string>(table.RowCount);
-                        for (int i = 0; i < table.RowCount; i++)
-                        {
-                            List<string> columnValues = new List<string>(table.Columns.Count);
-                            foreach (Column column in table.Columns.Values)
-                            {
-                                if (column.Values.ContainsKey(i + 1))
-                                {
-                                    if (column.Values[i + 1] != null)
-                                    {
-                                        string value = column.Values[i + 1].ToString();
-                                        switch (column.Type)
-                                        {
-                                            case "int":
-                                                if (value == "")
-                                                {
-                                                    value = "NULL";
-                                                }
-                                                else if (value == "Infinity")
-                                                {
-                                                    value = int.MaxValue.ToString();
-                                                }
-                                                else
-                                                {
-                                                    int temp;
-                                                    if (!int.TryParse(value, out temp))
-                                                    {
-                                                        value = "NULL";
-                                                    }
-                                                }
-                                                columnValues.Add(value);
-                                                break;
-                                            default:
-                                                value = value.ToString().Replace("'", "\\'");
-                                                columnValues.Add("'" + value + "'");
-                                                break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        columnValues.Add("NULL");
-                                    }
-                                }
-                                else
-                                {
-                                    columnValues.Add("NULL");
-                                }
-                            }
-                            rows.Add("(" + (i + 1) + "," + String.Join(",", columnValues) + ")");
-                            if (i % 1000 == 999 && i != table.RowCount - 1)//TODO: maybe change this? this is to prevent max_allowed_packet error
-                            {
-                                command.CommandText += String.Join(",", rows) + ";";
-                                command.CommandText += "/*!40000 ALTER TABLE `" + table.Name + "` ENABLE KEYS */;";
-                                command.CommandText += "UNLOCK TABLES;";
-                                command.ExecuteNonQuery();
-
-                                command.CommandText = "LOCK TABLES `" + table.Name + "` WRITE;";
-                                command.CommandText += "/*!40000 ALTER TABLE `" + table.Name + "` DISABLE KEYS */;";
-                                command.CommandText += "INSERT INTO `" + table.Name + "` (`id`,`" + String.Join("`,`", table.Columns.Keys) + "`) VALUES ";
-                                rows.Clear();
-                            }
-                        }
-                        command.CommandText += String.Join(",", rows) + ";";
-                        command.CommandText += "/*!40000 ALTER TABLE `" + table.Name + "` ENABLE KEYS */;";
-                        command.CommandText += "UNLOCK TABLES;";
-                        command.ExecuteNonQuery();
-                    }
-                }
-                command.CommandText = "/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;";
-                command.CommandText += "/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;";
-                command.CommandText += "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;";
-                command.CommandText += "/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;";
-                command.CommandText += "/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;";
-                command.CommandText += "/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;";
-                command.CommandText += "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;";
-                command.CommandText += "/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;";
-                command.ExecuteNonQuery();
-                conn.Close();
-            }
-        }
         private NotesSession initSession(string password)
         {
             NotesSession nSession = new NotesSession();
-            try
-            {
-                nSession.Initialize(password);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-                return null;
-            }
+            nSession.Initialize(password);
             return nSession;
         }
-
-        private void treeView1_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
-        {
-            if (treeView1.SelectedNode.Nodes.Count == 0)
-            {
-                bExportDocuments_Click(sender, e);
-            }
-        }
-
-        //private void listBox1_DoubleClick(object sender, EventArgs e)
-        //{
-        //    //NotesDatabase db1 = dbArray[listBox1.SelectedIndices[0]];
-        //    //NotesDatabase db2 = dbArray[listBox1.SelectedIndices[0] + 1];
-        //    //List<string> sa1 = new List<string>();
-        //    //List<string> sa2 = new List<string>();
-        //    //List<string> diff = new List<string>();
-        //    //foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(db1))
-        //    //{
-        //    //    try
-        //    //    {
-        //    //        v1 = descriptor.GetValue(db1);
-        //    //        v2 = descriptor.GetValue(db2);
-        //    //        sa1.Add(descriptor.Name + ": " + v1);
-        //    //        sa2.Add(descriptor.Name + ": " + v2);
-        //    //        if (v1 != v2)
-        //    //        {
-        //    //            diff.Add(descriptor.Name + ": " + v1 + " : " + v2);
-        //    //        }
-        //    //    }
-        //    //    catch { }
-        //    //}
-        //    //var temp = 0;
-        //}
-
-        ////modified from http://searchdomino.techtarget.com/tip/Get-all-field-names-of-a-Notes-form
-        //List<NotesForm> getForms(NotesDatabase db)
-        //{
-        //    // **************************************************************************
-        //    // * Given server (strServer) and path (strPath) of a database
-        //    // * this routine returns a list of all forms available in this database
-        //    // * The if-clause marked with ### is used to exclude the hidden
-        //    // * and system forms from the choice list.
-        //    // **************************************************************************
-        //    List<NotesForm> forms = new List<NotesForm>();
-        //    foreach (NotesForm frm in db.Forms)
-        //    {
-        //        //if (((frm.Name.Substring(0, 1) != "$") && (frm.Name.Substring(0, 1) != "(")))
-        //        //{
-        //        forms.Add(frm);
-        //        //}
-        //    }
-        //    return forms;
-        //}
-
-        ////modified from http://searchdomino.techtarget.com/tip/Get-all-field-names-of-a-Notes-form
-        //List<string> getFields(NotesForm form)
-        //{
-        //    // **************************************************************************
-        //    // * Given server (strServer) and path (strPath) of a database and
-        //    // * the name or alias (strForm) of a form in this database
-        //    // * this routine returns a list of all fields available in this form
-        //    // * The if-clause marked with ### is used to exclude the hidden
-        //    // * and system forms from the choice list.
-        //    // **************************************************************************
-        //    List<string> fields = new List<string>(form.Fields);
-        //    return fields;
-        //}
-        //string getFormName(NotesForm form)
-        //{
-
-        //    if (form.Aliases.GetType().IsArray)
-        //    {
-        //        if ((form.Aliases[0] == ""))
-        //        {
-        //            return form.Name;
-        //            // no alias = take the name of the form
-        //        }
-        //        else
-        //        {
-        //            return form.Aliases[form.Aliases.Length - 1];
-        //            // The last alias in the list is normally the one who is written into the form field of corresponding documents
-        //        }
-        //    }
-        //    return form.Name;
-        //}
-        //List<NotesDocument> getFormDocuments(NotesDatabase db, string formName)
-        //{
-        //    List<NotesDocument> documents = new List<NotesDocument>();
-        //    for (int i = 0; i < db.AllDocuments.Count; i++)
-        //    {
-        //        NotesDocument document = db.AllDocuments.GetNthDocument(i);
-        //        if (document.Items.Form == formName)
-        //        {
-        //            documents.Add(document);
-        //        }
-        //    }
-        //    return documents;
-        //}
     }
 }

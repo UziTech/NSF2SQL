@@ -9,17 +9,47 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.WindowsAPICodePack.Taskbar;
 
-public class ProgressDialog
+public class ProgressDialog : IDisposable
 {
     private BackgroundWorker worker = new BackgroundWorker();
+    private dialogForm dialog = new dialogForm();
 
-    public event CancelEventHandler Canceled;
+    public event CancelEventHandler Cancelled;
     public event RunWorkerCompletedEventHandler Completed;
     public event ProgressChangedEventHandler ProgressChanged;
     public event DoWorkEventHandler DoWork;
 
-    private dialogForm dialog = new dialogForm();
+    private bool disposed = false;
 
+    public void Dispose()
+    {
+        Dispose(true);
+        // This object will be cleaned up by the Dispose method. 
+        // Therefore, you should call GC.SupressFinalize to 
+        // take this object off the finalization queue 
+        // and prevent finalization code for this object 
+        // from executing a second time.
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        // Check to see if Dispose has already been called. 
+        if (!this.disposed)
+        {
+            // If disposing equals true, dispose all managed 
+            // and unmanaged resources. 
+            if (disposing)
+            {
+                // Dispose managed resources.
+                worker.Dispose();
+                dialog.Dispose();
+            }
+            // Note disposing has been done.
+            disposed = true;
+
+        }
+    }
     public ProgressDialog()
     {
         worker = new BackgroundWorker();
@@ -28,15 +58,15 @@ public class ProgressDialog
         worker.DoWork += worker_DoWork;
         worker.WorkerSupportsCancellation = true;
         worker.WorkerReportsProgress = true;
-        dialog.Canceled += dialog_Canceled;
+        dialog.Cancelled += dialog_Cancelled;
     }
 
-    void dialog_Canceled(object sender, CancelEventArgs e)
+    void dialog_Cancelled(object sender, CancelEventArgs e)
     {
         worker.CancelAsync();
-        if (Canceled != null)
+        if (Cancelled != null)
         {
-            Canceled(this, e);
+            Cancelled(this, e);
         }
     }
 
@@ -45,7 +75,7 @@ public class ProgressDialog
         if (DoWork != null)
         {
             DoWork(this, e);
-            e.Cancel = Cancelled;
+            e.Cancel = IsCancelled || e.Cancel;
         }
         else
         {
@@ -128,7 +158,7 @@ public class ProgressDialog
         }
     }
 
-    public bool Cancelled
+    public bool IsCancelled
     {
         get { return worker.CancellationPending; }
     }
@@ -139,12 +169,17 @@ public class ProgressDialog
         set { dialog.progressBar.Style = value; }
     }
 
+    public IWin32Window Window
+    {
+        get { return dialog; }
+    }
+
     private class dialogForm : Form
     {
         public Label message;
         public ProgressBar progressBar;
         private Button bCancel;
-        public event CancelEventHandler Canceled;
+        public event CancelEventHandler Cancelled;
 
         public dialogForm()
         {
@@ -164,7 +199,7 @@ public class ProgressDialog
             // 
             // progressBar
             // 
-            this.progressBar.Anchor = ((AnchorStyles)((((AnchorStyles.Top | AnchorStyles.Bottom) | AnchorStyles.Left) | AnchorStyles.Right)));
+            this.progressBar.Anchor = (AnchorStyles)(AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right);
             this.progressBar.Location = new Point(12, 25);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new Size(421, 23);
@@ -172,7 +207,7 @@ public class ProgressDialog
             // 
             // bCancel
             // 
-            this.bCancel.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Right)));
+            this.bCancel.Anchor = (AnchorStyles)(AnchorStyles.Bottom | AnchorStyles.Right);
             this.bCancel.Location = new Point(358, 54);
             this.bCancel.Name = "bCancel";
             this.bCancel.Size = new Size(75, 23);
@@ -181,7 +216,7 @@ public class ProgressDialog
             this.bCancel.UseVisualStyleBackColor = true;
             this.bCancel.Click += new EventHandler(this.bCancel_Click);
             // 
-            // loadingDialog
+            // dialogForm
             // 
             this.AutoScaleDimensions = new SizeF(6F, 13F);
             this.AutoScaleMode = AutoScaleMode.Font;
@@ -191,7 +226,7 @@ public class ProgressDialog
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.message);
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            this.Name = "loadingDialog";
+            this.Name = "dialogForm";
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
             this.Text = "Loading";
@@ -209,10 +244,10 @@ public class ProgressDialog
             if (MessageBox.Show("Are you sure you want to cancel?", "Cancel", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
             {
                 bCancel.Enabled = false;
-                this.Text = "Canceling...";
-                if (Canceled != null)
+                this.Text = "Cancelling...";
+                if (Cancelled != null)
                 {
-                    Canceled(this, new CancelEventArgs(true));
+                    Cancelled(this, new CancelEventArgs(true));
                 }
             }
         }

@@ -49,7 +49,7 @@
             this.bGetDatabases.TabIndex = 2;
             this.bGetDatabases.Text = "Search Server";
             this.bGetDatabases.UseVisualStyleBackColor = true;
-            this.bGetDatabases.Click += new System.EventHandler(this.bGetDatabases_Click);
+            this.bGetDatabases.Click += new System.EventHandler(this.bSearchServer_Click);
             // 
             // bExportDocuments
             // 
@@ -71,7 +71,7 @@
             this.bBrowse.TabIndex = 3;
             this.bBrowse.Text = "Search Computer";
             this.bBrowse.UseVisualStyleBackColor = true;
-            this.bBrowse.Click += new System.EventHandler(this.bBrowse_Click);
+            this.bBrowse.Click += new System.EventHandler(this.bSearchComputer_Click);
             // 
             // openFileDialog1
             // 
@@ -92,6 +92,8 @@
             this.treeView1.Name = "treeView1";
             this.treeView1.SelectedImageIndex = 0;
             this.treeView1.ShowNodeToolTips = true;
+            this.treeView1.ShowPlusMinus = false;
+            this.treeView1.ShowRootLines = false;
             this.treeView1.Size = new System.Drawing.Size(380, 226);
             this.treeView1.TabIndex = 1;
             this.treeView1.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseDoubleClick);

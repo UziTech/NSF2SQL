@@ -19,8 +19,8 @@ public enum InputBoxButtons
 
 public enum InputBoxResult
 {
-    OK,
     Cancel,
+    OK,
     Yes,
     No,
     Save
@@ -65,56 +65,45 @@ public struct InputBoxItem
 
 public class InputBox
 {
-    private Dictionary<string, string> values;
+    private Dictionary<string, string> items;
     private InputBoxResult result;
 
-    private InputBox()
+    private InputBox(dialogForm dialog)
     {
-
+        result = dialog.InputResult;
+        items = new Dictionary<string, string>();
+        for (int i = 0; i < dialog.label.Length; i++)
+        {
+            items.Add(dialog.label[i].Text, dialog.textBox[i].Text);
+        }
     }
 
     public static InputBox Show(string title, string label)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label) }, InputBoxButtons.OK);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(1);
-        inputDialog.values.Add(dialog.label[0].Text, dialog.textBox[0].Text);
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, string label, InputBoxButtons buttons)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label) }, buttons);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(1);
-        inputDialog.values.Add(dialog.label[0].Text, dialog.textBox[0].Text);
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, string label, string text)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label, text) }, InputBoxButtons.OK);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(1);
-        inputDialog.values.Add(dialog.label[0].Text, dialog.textBox[0].Text);
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, string label, string text, InputBoxButtons buttons)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label, text) }, buttons);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(1);
-        inputDialog.values.Add(dialog.label[0].Text, dialog.textBox[0].Text);
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, string[] labels)
@@ -125,16 +114,9 @@ public class InputBox
             items[i] = new InputBoxItem(labels[i]);
         }
 
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, items, InputBoxButtons.OK);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(dialog.label.Length);
-        for (int i = 0; i < dialog.label.Length; i++)
-        {
-            inputDialog.values.Add(dialog.label[i].Text, dialog.textBox[i].Text);
-        }
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, string[] labels, InputBoxButtons buttons)
@@ -145,77 +127,124 @@ public class InputBox
             items[i] = new InputBoxItem(labels[i]);
         }
 
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, items, buttons);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(dialog.label.Length);
-        for (int i = 0; i < dialog.label.Length; i++)
-        {
-            inputDialog.values.Add(dialog.label[i].Text, dialog.textBox[i].Text);
-        }
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, InputBoxItem item)
     {
-        InputBox inputDialog = new InputBox();
-        dialogForm dialog = new dialogForm(title, new InputBoxItem[]{ item }, InputBoxButtons.OK);
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { item }, InputBoxButtons.OK);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(dialog.label.Length);
-        for (int i = 0; i < dialog.label.Length; i++)
-        {
-            inputDialog.values.Add(dialog.label[i].Text, dialog.textBox[i].Text);
-        }
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, InputBoxItem item, InputBoxButtons buttons)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, new InputBoxItem[] { item }, buttons);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(dialog.label.Length);
-        for (int i = 0; i < dialog.label.Length; i++)
-        {
-            inputDialog.values.Add(dialog.label[i].Text, dialog.textBox[i].Text);
-        }
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, InputBoxItem[] items)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, items, InputBoxButtons.OK);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(dialog.label.Length);
-        for (int i = 0; i < dialog.label.Length; i++)
-        {
-            inputDialog.values.Add(dialog.label[i].Text, dialog.textBox[i].Text);
-        }
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
     public static InputBox Show(string title, InputBoxItem[] items, InputBoxButtons buttons)
     {
-        InputBox inputDialog = new InputBox();
         dialogForm dialog = new dialogForm(title, items, buttons);
         dialog.ShowDialog();
-        inputDialog.result = dialog.InputResult;
-        inputDialog.values = new Dictionary<string, string>(dialog.label.Length);
-        for (int i = 0; i < dialog.label.Length; i++)
-        {
-            inputDialog.values.Add(dialog.label[i].Text, dialog.textBox[i].Text);
-        }
-        return inputDialog;
+        return new InputBox(dialog);
     }
 
-    public Dictionary<string, string> Values
+    public static InputBox Show(IWin32Window window, string title, string label)
     {
-        get { return values; }
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label) }, InputBoxButtons.OK);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, string label, InputBoxButtons buttons)
+    {
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label) }, buttons);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, string label, string text)
+    {
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label, text) }, InputBoxButtons.OK);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, string label, string text, InputBoxButtons buttons)
+    {
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { new InputBoxItem(label, text) }, buttons);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, string[] labels)
+    {
+        InputBoxItem[] items = new InputBoxItem[labels.Length];
+        for (int i = 0; i < labels.Length; i++)
+        {
+            items[i] = new InputBoxItem(labels[i]);
+        }
+
+        dialogForm dialog = new dialogForm(title, items, InputBoxButtons.OK);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, string[] labels, InputBoxButtons buttons)
+    {
+        InputBoxItem[] items = new InputBoxItem[labels.Length];
+        for (int i = 0; i < labels.Length; i++)
+        {
+            items[i] = new InputBoxItem(labels[i]);
+        }
+
+        dialogForm dialog = new dialogForm(title, items, buttons);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, InputBoxItem item)
+    {
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { item }, InputBoxButtons.OK);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, InputBoxItem item, InputBoxButtons buttons)
+    {
+        dialogForm dialog = new dialogForm(title, new InputBoxItem[] { item }, buttons);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, InputBoxItem[] items)
+    {
+        dialogForm dialog = new dialogForm(title, items, InputBoxButtons.OK);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public static InputBox Show(IWin32Window window, string title, InputBoxItem[] items, InputBoxButtons buttons)
+    {
+        dialogForm dialog = new dialogForm(title, items, buttons);
+        dialog.ShowDialog(window);
+        return new InputBox(dialog);
+    }
+
+    public Dictionary<string, string> Items
+    {
+        get { return items; }
     }
 
     public InputBoxResult Result
@@ -225,7 +254,7 @@ public class InputBox
 
     private class dialogForm : Form
     {
-        private InputBoxResult inputResult;
+        private InputBoxResult inputResult = InputBoxResult.Cancel;
         public TextBox[] textBox;
         public Label[] label;
         private Button button1;
@@ -257,7 +286,7 @@ public class InputBox
             // 
             // label
             // 
-            for (int i = 0; i < label.Length; i++)
+            for (int i = 0; i < items.Length; i++)
             {
                 label[i].AutoSize = true;
                 label[i].Location = new Point(12, 9 + (i * 39));
@@ -271,9 +300,9 @@ public class InputBox
             // 
             // textBox
             // 
-            for (int i = 0; i < textBox.Length; i++)
+            for (int i = 0; i < items.Length; i++)
             {
-                textBox[i].Anchor = ((AnchorStyles)((AnchorStyles.Top | AnchorStyles.Left) | AnchorStyles.Right));
+                textBox[i].Anchor = (AnchorStyles)(AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right);
                 textBox[i].Location = new Point(12, 25 + (i * 39));
                 textBox[i].Name = "textBox[" + i + "]";
                 textBox[i].Size = new Size(288, 20);
@@ -287,31 +316,31 @@ public class InputBox
             // 
             // button1
             // 
-            button1.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Right)));
+            button1.Anchor = (AnchorStyles)(AnchorStyles.Bottom | AnchorStyles.Right);
             button1.Location = new Point(208, 15 + (39 * label.Length));
             button1.Name = "button1";
             button1.Size = new Size(92, 23);
-            button1.TabIndex = 6;
+            button1.TabIndex = items.Length + 2;
             button1.Text = "button1";
             button1.UseVisualStyleBackColor = true;
             // 
             // button2
             // 
-            button2.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Right)));
+            button2.Anchor = (AnchorStyles)(AnchorStyles.Bottom | AnchorStyles.Right);
             button2.Location = new Point(110, 15 + (39 * label.Length));
             button2.Name = "button2";
             button2.Size = new Size(92, 23);
-            button2.TabIndex = 2;
+            button2.TabIndex = items.Length + 1;
             button2.Text = "button2";
             button2.UseVisualStyleBackColor = true;
             // 
             // button3
             // 
-            button3.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Right)));
+            button3.Anchor = (AnchorStyles)(AnchorStyles.Bottom | AnchorStyles.Right);
             button3.Location = new Point(12, 15 + (39 * label.Length));
             button3.Name = "button3";
             button3.Size = new Size(92, 23);
-            button3.TabIndex = 3;
+            button3.TabIndex = items.Length;
             button3.Text = "button3";
             button3.UseVisualStyleBackColor = true;
             //

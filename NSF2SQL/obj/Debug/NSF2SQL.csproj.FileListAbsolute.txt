@@ -16,7 +16,6 @@ C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\I
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.csproj.ResolveComReference.cache
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.exe
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.pdb
-C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.csprojResolveAssemblyReference.cache
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.Form1.resources
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.Properties.Resources.resources
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.csproj.GenerateResource.Cache
@@ -25,3 +24,4 @@ C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\bin\Debug\N
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\bin\Debug\Microsoft.WindowsAPICodePack.dll
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\bin\Debug\Microsoft.WindowsAPICodePack.Shell.dll
 C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\bin\Debug\MySql.Data.dll
+C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.csprojResolveAssemblyReference.cache

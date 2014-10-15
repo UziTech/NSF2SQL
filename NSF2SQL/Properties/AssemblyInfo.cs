@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("NSF2SQL")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Convert Lotus Notes (.nsf) database to SQL")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("UziTech")]
 [assembly: AssemblyProduct("NSF2SQL")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
