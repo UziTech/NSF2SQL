@@ -20,7 +20,7 @@ namespace NSF2SQL
         string mysqlUsername = "";
         string mysqlPassword = "";
         int mysqlNumRowsPerInsert = 1000;
-        //Regex excludeField = new Regex("^(\\$.*|Form|Readers)$");
+        Regex excludeField = new Regex("^(Form)$");//new Regex("^(\\$.*|Form|Readers)$");
 
         public Form1()
         {
@@ -383,10 +383,10 @@ namespace NSF2SQL
                                 }
                                 string field = item.Name;
                                 //exclude fields that start with $ and the Form field and Readers field
-                                //if (excludeField.IsMatch(field))
-                                //{
-                                //    continue;
-                                //}
+                                if (excludeField.IsMatch(field))
+                                {
+                                    continue;
+                                }
                                 string type = "";
                                 switch (item.type)
                                 {//TODO: get more types
@@ -496,8 +496,14 @@ namespace NSF2SQL
                                     object value;
                                     if (cell.Value.GetType().IsArray)
                                     {
-                                        object[] valueArray = (object[])cell.Value;
-                                        value = valueArray.GetValue(0);
+                                        if (((object[])cell.Value).Length > 0)
+                                        {
+                                            value = ((object[])cell.Value)[0];
+                                        }
+                                        else
+                                        {
+                                            value = null;
+                                        }
                                     }
                                     else
                                     {
@@ -561,6 +567,7 @@ namespace NSF2SQL
                                                 command.CommandText += String.Join(",\n", rows.GetRange(i, Math.Min(rows.Count - i, mysqlNumRowsPerInsert))) + ";\n";
                                                 command.CommandText += endInsertTable(table);
                                                 command.ExecuteNonQuery();
+                                                pDialog.ReportProgress(count, "Inserting SQL");
                                             }
                                         }
                                     }
@@ -784,7 +791,14 @@ namespace NSF2SQL
                                         DateTime temp;
                                         if (DateTime.TryParse(value, out temp))
                                         {
-                                            value = ((DateTime)column.Values[i + 1]).ToString("yyyy-MM-dd HH:mm:ss");
+                                            if (column.Values[i + 1] is DateTime)
+                                            {
+                                                value = ((DateTime)column.Values[i + 1]).ToString("yyyy-MM-dd HH:mm:ss");
+                                            }
+                                            else
+                                            {
+                                                value = temp.ToString("yyyy-MM-dd HH:mm:ss");
+                                            }
                                             value = "'" + value + "'";
                                         }
                                         else
