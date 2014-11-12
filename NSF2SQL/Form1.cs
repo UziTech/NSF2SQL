@@ -413,8 +413,32 @@ namespace NSF2SQL
                                     tables[form].Columns[field].MultipleValues = multiple;
                                 }
 
-                                tables[form].Columns[field].Values.Add(row, values);
+                                if (!tables[form].Columns[field].Values.ContainsKey(row))
+                                {
+                                    tables[form].Columns[field].Values.Add(row, values);
+                                }
+                                else
+                                {
+                                    int j = 1;
+                                    while (tables[form].Columns.ContainsKey(field + j) && tables[form].Columns[field + j].Values.ContainsKey(row))
+                                    {
+                                        j++;
+                                    }
 
+                                    field += j;
+
+                                    if (!tables[form].Columns.ContainsKey(field))
+                                    {
+                                        tables[form].Columns.Add(field, new Column(field, type));
+                                    }
+
+                                    if (multiple && !tables[form].Columns[field].MultipleValues)
+                                    {
+                                        tables[form].Columns[field].MultipleValues = multiple;
+                                    }
+
+                                    tables[form].Columns[field].Values.Add(row, values);
+                                }
                             }
                         }
                         //update progress
@@ -624,7 +648,7 @@ namespace NSF2SQL
                                     }
                                     catch (Exception ex)
                                     {
-                                        MessageBox.Show(ex.Message);
+                                        MessageBox.Show(ex.ToString());
                                     }
                                     finally
                                     {
@@ -642,7 +666,7 @@ namespace NSF2SQL
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    MessageBox.Show(ex.ToString());
                     e.Cancel = true;
                 }
             };
