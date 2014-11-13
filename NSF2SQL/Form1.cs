@@ -832,7 +832,7 @@ namespace NSF2SQL
                                     }
                                     break;
                                 default:
-                                    value = "'" + value.ToString().Replace("'", "\\'") + "'";
+                                    value = "'" + value.ToString().Replace("'", "''") + "'";
                                     break;
                             }
                             columnValues.Add(value);
