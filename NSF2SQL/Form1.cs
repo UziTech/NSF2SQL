@@ -365,7 +365,7 @@ namespace NSF2SQL
                         {
                             //get form
                             string form = (string)doc.GetItemValue("Form")[0];
-
+                            
                             if (!tables.ContainsKey(form))
                             {
                                 tables.Add(form, new Table(form));
@@ -391,7 +391,7 @@ namespace NSF2SQL
                                 switch (item.type)
                                 {//TODO: get more types
                                     case IT_TYPE.NUMBERS:
-                                        type = "int";
+                                        type = "decimal(20,10)";
                                         break;
                                     case IT_TYPE.DATETIMES:
                                         type = "datetime";
@@ -787,19 +787,19 @@ namespace NSF2SQL
                             string value = column.Values[i + 1].ToString();
                             switch (column.Type)
                             {
-                                case "int":
+                                case "decimal(20,10)":
                                     if (value == "")
                                     {
                                         value = "NULL";
                                     }
                                     else if (value == "Infinity")
                                     {
-                                        value = int.MaxValue.ToString();
+                                        value = "9999999999.9999999999";
                                     }
                                     else
                                     {
-                                        int temp;
-                                        if (!int.TryParse(value, out temp))
+                                        double temp;
+                                        if (!double.TryParse(value, out temp))
                                         {
                                             value = "NULL";
                                         }
