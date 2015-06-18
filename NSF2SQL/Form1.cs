@@ -588,7 +588,7 @@ namespace NSF2SQL
                                             for (int i = 0; i < rows.Count; i += mysqlNumRowsPerInsert)
                                             {
                                                 command.CommandText = beginInsertTable(table);
-                                                command.CommandText += String.Join(",\n", rows.GetRange(i, Math.Min(rows.Count - i, mysqlNumRowsPerInsert))) + ";\n";
+                                                command.CommandText += String.Join(",", rows.GetRange(i, Math.Min(rows.Count - i, mysqlNumRowsPerInsert))) + ";\n";
                                                 command.CommandText += endInsertTable(table);
                                                 command.ExecuteNonQuery();
                                                 pDialog.ReportProgress(count, "Inserting SQL");
@@ -639,7 +639,7 @@ namespace NSF2SQL
                                             {
                                                 file.WriteLine(createTable(table));
                                                 file.WriteLine(beginInsertTable(table));
-                                                file.WriteLine(String.Join(",\n", insertTableRows(table)) + ";");
+                                                file.WriteLine(String.Join(",", insertTableRows(table)) + ";");
                                                 file.WriteLine(endInsertTable(table));
                                             }
                                         }
