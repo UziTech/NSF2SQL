@@ -383,7 +383,7 @@ namespace NSF2SQL
                                 }
                                 string field = item.Name;
                                 //exclude fields that start with $ and the Form field and Readers field
-                                if (excludeField.IsMatch(field))
+                                if (field == null || excludeField.IsMatch(field))
                                 {
                                     continue;
                                 }
