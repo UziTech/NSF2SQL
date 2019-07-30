@@ -6,6 +6,9 @@ using Domino;
 using System.IO;
 using MySql.Data.MySqlClient;
 using System.Text.RegularExpressions;
+using System.Data.Common;
+using System.Data.SqlClient;
+using System.Linq;
 
 namespace NSF2SQL
 {
@@ -21,6 +24,7 @@ namespace NSF2SQL
         string mysqlPassword = "";
         int mysqlNumRowsPerInsert = 1000;
         Regex excludeField = new Regex("^(Form)$");//new Regex("^(\\$.*|Form|Readers)$");
+        private static ISqlGenerator sqlGenerator;
 
         public Form1()
         {
@@ -333,6 +337,8 @@ namespace NSF2SQL
             #region Export Documents
             pDialog.DoWork += delegate(object dialog, DoWorkEventArgs e)
             {
+                ExportTarget exportDialog = new ExportTarget();
+
                 try
                 {
                     //export documents
@@ -542,13 +548,29 @@ namespace NSF2SQL
                     //format to sql
                     total = newTables.Count;
                     bool complete = false;
+
+                    lastTicks = 0;
+                    count = 0;
+                    DialogResult result = DialogResult.Cancel;
+                    Invoke((MethodInvoker)delegate() { result = exportDialog.ShowDialog(this); });
+                    if (result == DialogResult.Cancel)
+                    {
+                        e.Cancel = true;
+                        return;
+                    }
+
+                    if (exportDialog.SqlServerExport)
+                    {
+                        sqlGenerator = new TsqlGenerator();
+                    }
+                    else if (exportDialog.MySqlExport)
+                    {
+                        sqlGenerator = new MySqlGenerator();
+                    }
+
                     do
                     {
-                        lastTicks = 0;
-                        count = 0;
-                        DialogResult result = DialogResult.Cancel;
-                        Invoke((MethodInvoker)delegate() { result = MessageBox.Show(pDialog.Window, "Do you want to export to a MySQL server?", "Export to a server?", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1); });
-                        if (result == DialogResult.Yes)
+                        if (exportDialog.ServerExport)
                         {
                             InputBox input = null;
                             Invoke((MethodInvoker)delegate() { input = InputBox.Show(pDialog.Window, "SQL server info?", new InputBoxItem[] { new InputBoxItem("Server", mysqlServer), new InputBoxItem("Database", mysqlDatabase), new InputBoxItem("Username", mysqlUsername), new InputBoxItem("Password", mysqlPassword, true), new InputBoxItem("Number of rows per INSERT", mysqlNumRowsPerInsert.ToString()) }, InputBoxButtons.OKCancel); });
@@ -560,18 +582,39 @@ namespace NSF2SQL
                                 mysqlPassword = input.Items["Password"];
                                 int.TryParse(input.Items["Number of rows per INSERT"], out mysqlNumRowsPerInsert);
 
-                                MySqlConnection conn = new MySqlConnection("SERVER=" + mysqlServer + ";USERNAME=" + mysqlUsername + ";PASSWORD=" + mysqlPassword + ";");
+                                DbConnection conn = null;
+                                if (exportDialog.MySqlExport)
+                                {
+                                    conn = new MySqlConnection("SERVER=" + mysqlServer + ";USERNAME=" + mysqlUsername + ";PASSWORD=" + mysqlPassword + ";");
+                                }
+                                else if (exportDialog.SqlServerExport)
+                                {
+                                    conn = new SqlConnection("Server=" + mysqlServer + ";User Id=" + mysqlUsername + ";Password=" + mysqlPassword + ";");
+                                }
 
                                 try
                                 {
                                     startTicks = DateTime.Now.Ticks;
                                     conn.Open();
 
-                                    MySqlCommand command = conn.CreateCommand();
-                                    command.CommandText = createDatabase(mysqlDatabase);
+                                    string[] tokens = null;
+                                    if (exportDialog.SqlServerExport)
+                                    {
+                                        tokens = sqlGenerator.CreateDatabase(mysqlDatabase).Split(new string[] { "GO\r\n" }, StringSplitOptions.None);
+                                    }
+                                    else
+                                    {
+                                        tokens = new string[] { sqlGenerator.CreateDatabase(mysqlDatabase) + sqlGenerator.SetVariables() };
+                                    }
 
-                                    command.ExecuteNonQuery();
-                                    foreach (Table table in newTables.Values)
+                                    DbCommand command = conn.CreateCommand();
+                                    foreach (string sqlString in tokens)
+                                    {
+                                        command.CommandText = sqlString;
+                                        command.ExecuteNonQuery();
+                                    }
+
+                                    foreach (Table table in newTables.Values.Where(t => string.IsNullOrEmpty(t.LinkedTable)))
                                     {
                                         //check if cancelled
                                         if (pDialog.IsCancelled)
@@ -582,21 +625,50 @@ namespace NSF2SQL
                                         pDialog.ReportProgress(++count, "Inserting SQL");
                                         if (table.Columns.Count > 0)
                                         {
-                                            command.CommandText = createTable(table);
+                                            command.CommandText = sqlGenerator.CreateTable(table);
                                             command.ExecuteNonQuery();
-                                            List<string> rows = insertTableRows(table);
+                                            List<string> rows = sqlGenerator.InsertTableRowsToList(table);
                                             for (int i = 0; i < rows.Count; i += mysqlNumRowsPerInsert)
                                             {
-                                                command.CommandText = beginInsertTable(table);
+                                                command.CommandText = sqlGenerator.BeginInsertTable(table);
                                                 command.CommandText += String.Join(",", rows.GetRange(i, Math.Min(rows.Count - i, mysqlNumRowsPerInsert))) + ";\n";
-                                                command.CommandText += endInsertTable(table);
+                                                command.CommandText += sqlGenerator.EndInsertTable(table);
                                                 command.ExecuteNonQuery();
                                                 pDialog.ReportProgress(count, "Inserting SQL");
                                             }
                                         }
                                     }
-                                    command.CommandText = restoreVariables();
-                                    command.ExecuteNonQuery();
+
+                                    foreach (Table table in newTables.Values.Where(t => !string.IsNullOrEmpty(t.LinkedTable)))
+                                    {
+                                        //check if cancelled
+                                        if (pDialog.IsCancelled)
+                                        {
+                                            e.Cancel = true;
+                                            return;
+                                        }
+                                        pDialog.ReportProgress(++count, "Inserting SQL");
+                                        if (table.Columns.Count > 0)
+                                        {
+                                            command.CommandText = sqlGenerator.CreateTable(table);
+                                            command.ExecuteNonQuery();
+                                            List<string> rows = sqlGenerator.InsertTableRowsToList(table);
+                                            for (int i = 0; i < rows.Count; i += mysqlNumRowsPerInsert)
+                                            {
+                                                command.CommandText = sqlGenerator.BeginInsertTable(table);
+                                                command.CommandText += String.Join(",", rows.GetRange(i, Math.Min(rows.Count - i, mysqlNumRowsPerInsert))) + ";\n";
+                                                command.CommandText += sqlGenerator.EndInsertTable(table);
+                                                command.ExecuteNonQuery();
+                                                pDialog.ReportProgress(count, "Inserting SQL");
+                                            }
+                                        }
+                                    }
+
+                                    command.CommandText = sqlGenerator.RestoreVariables();
+                                    if (!string.IsNullOrEmpty(command.CommandText))
+                                    {
+                                        command.ExecuteNonQuery();
+                                    }
                                     complete = true;
                                 }
                                 catch (Exception ex)
@@ -607,9 +679,11 @@ namespace NSF2SQL
                                 {
                                     conn.Close();
                                 }
+
+                                conn.Dispose();
                             }
                         }
-                        else if (result == DialogResult.No)
+                        else if (exportDialog.FileExport)
                         {
                             saveFileDialog1.FileName = "export.sql";
                             result = DialogResult.Cancel;
@@ -625,8 +699,9 @@ namespace NSF2SQL
                                     try
                                     {
                                         startTicks = DateTime.Now.Ticks;
-                                        file.WriteLine(createDatabase(mysqlDatabase));
-                                        foreach (Table table in newTables.Values)
+                                        file.WriteLine(sqlGenerator.CreateDatabase(mysqlDatabase));
+                                        file.WriteLine(sqlGenerator.SetVariables());
+                                        foreach (Table table in newTables.Values.Where(t => string.IsNullOrEmpty(t.LinkedTable)))
                                         {
                                             //check if cancelled
                                             if (pDialog.IsCancelled)
@@ -637,13 +712,30 @@ namespace NSF2SQL
                                             pDialog.ReportProgress(++count, "Formatting SQL");
                                             if (table.Columns.Count > 0)
                                             {
-                                                file.WriteLine(createTable(table));
-                                                file.WriteLine(beginInsertTable(table));
-                                                file.WriteLine(String.Join(",", insertTableRows(table)) + ";");
-                                                file.WriteLine(endInsertTable(table));
+                                                file.WriteLine(sqlGenerator.CreateTable(table));
+                                                file.WriteLine(sqlGenerator.BeginInsertTable(table));
+                                                file.WriteLine(sqlGenerator.InsertTableRowsToString(table));
+                                                file.WriteLine(sqlGenerator.EndInsertTable(table));
                                             }
                                         }
-                                        file.WriteLine(restoreVariables());
+                                        foreach (Table table in newTables.Values.Where(t => !string.IsNullOrEmpty(t.LinkedTable)))
+                                        {
+                                            //check if cancelled
+                                            if (pDialog.IsCancelled)
+                                            {
+                                                e.Cancel = true;
+                                                return;
+                                            }
+                                            pDialog.ReportProgress(++count, "Formatting SQL");
+                                            if (table.Columns.Count > 0)
+                                            {
+                                                file.WriteLine(sqlGenerator.CreateTable(table));
+                                                file.WriteLine(sqlGenerator.BeginInsertTable(table));
+                                                file.WriteLine(sqlGenerator.InsertTableRowsToString(table));
+                                                file.WriteLine(sqlGenerator.EndInsertTable(table));
+                                            }
+                                        }
+                                        file.WriteLine(sqlGenerator.RestoreVariables());
                                         complete = true;
                                     }
                                     catch (Exception ex)
@@ -657,11 +749,6 @@ namespace NSF2SQL
                                 }
                             }
                         }
-                        else
-                        {
-                            e.Cancel = true;
-                            return;
-                        }
                     } while (!complete);
                 }
                 catch (Exception ex)
@@ -669,6 +756,8 @@ namespace NSF2SQL
                     MessageBox.Show(ex.ToString());
                     e.Cancel = true;
                 }
+
+                exportDialog.Dispose();
             };
             #endregion
             pDialog.ProgressChanged += delegate(object dialog, ProgressChangedEventArgs e)
@@ -714,164 +803,15 @@ namespace NSF2SQL
 
         private void treeView1_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
+            if (treeView1.SelectedNode == null)
+            {
+                return;
+            }
+
             if (treeView1.SelectedNode.Nodes.Count == 0)
             {
                 bExportDocuments_Click(sender, e);
             }
-        }
-
-        private string createDatabase(string databaseName)
-        {
-            string query =
-                "DROP DATABASE IF EXISTS `" + databaseName + "`;\n" +
-                "\n" +
-                "CREATE DATABASE `" + databaseName + "`;\n" +
-                "USE `" + databaseName + "`;\n" +
-                "\n" +
-                "/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n" +
-                "/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;\n" +
-                "/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;\n" +
-                "/*!40101 SET NAMES utf8 */;\n" +
-                "/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;\n" +
-                "/*!40103 SET TIME_ZONE='+00:00' */;\n" +
-                "/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;\n" +
-                "/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;\n" +
-                "/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n" +
-                "/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;\n";
-            return query;
-        }
-
-        private string createTable(Table table)
-        {
-            string query =
-                "CREATE TABLE `" + table.Name + "` (\n" +
-                "`id` INT NOT NULL,\n";
-            foreach (Column column in table.Columns.Values)
-            {
-                query += "`" + column.Name + "` " + column.Type + " NULL,\n";
-            }
-            query += "PRIMARY KEY (`id`)";
-            if (table.LinkedTable != null)
-            {
-                query +=
-                    ",\n" +
-                    "KEY `" + table.Name + "_idx` (`" + table.LinkedTable + "id`),\n" +
-                    "CONSTRAINT `" + table.Name + "` FOREIGN KEY (`" + table.LinkedTable + "id`) REFERENCES `" + table.LinkedTable + "` (`id`) ON DELETE CASCADE ON UPDATE CASCADE";
-            }
-            query += ");\n";
-            return query;
-        }
-
-        private string beginInsertTable(Table table)
-        {
-
-            string query =
-                "LOCK TABLES `" + table.Name + "` WRITE;\n" +
-                "/*!40000 ALTER TABLE `" + table.Name + "` DISABLE KEYS */;\n" +
-                "INSERT INTO `" + table.Name + "` (`id`,`" + String.Join("`,`", table.Columns.Keys) + "`) VALUES";
-            return query;
-        }
-
-        private List<string> insertTableRows(Table table)
-        {
-            List<string> rows = new List<string>(table.RowCount);
-            for (int i = 0; i < table.RowCount; i++)
-            {
-                List<string> columnValues = new List<string>(table.Columns.Count);
-                foreach (Column column in table.Columns.Values)
-                {
-                    if (column.Values.ContainsKey(i + 1))
-                    {
-                        if (column.Values[i + 1] != null)
-                        {
-                            string value = column.Values[i + 1].ToString();
-                            switch (column.Type)
-                            {
-                                case "decimal(20,10)":
-                                    if (value == "")
-                                    {
-                                        value = "NULL";
-                                    }
-                                    else if (value == "Infinity")
-                                    {
-                                        value = "9999999999.9999999999";
-                                    }
-                                    else
-                                    {
-                                        double temp;
-                                        if (!double.TryParse(value, out temp))
-                                        {
-                                            value = "NULL";
-                                        }
-                                    }
-                                    break;
-                                case "datetime":
-                                    if (value == "")
-                                    {
-                                        value = "NULL";
-                                    }
-                                    else
-                                    {
-                                        DateTime temp;
-                                        if (DateTime.TryParse(value, out temp))
-                                        {
-                                            if (column.Values[i + 1] is DateTime)
-                                            {
-                                                value = ((DateTime)column.Values[i + 1]).ToString("yyyy-MM-dd HH:mm:ss");
-                                            }
-                                            else
-                                            {
-                                                value = temp.ToString("yyyy-MM-dd HH:mm:ss");
-                                            }
-                                            value = "'" + value + "'";
-                                        }
-                                        else
-                                        {
-                                            value = "NULL";
-                                        }
-                                    }
-                                    break;
-                                default:
-                                    value = "'" + value.ToString().Replace("'", "''") + "'";
-                                    break;
-                            }
-                            columnValues.Add(value);
-                        }
-                        else
-                        {
-                            columnValues.Add("NULL");
-                        }
-                    }
-                    else
-                    {
-                        columnValues.Add("NULL");
-                    }
-                }
-                rows.Add("(" + (i + 1) + "," + String.Join(",", columnValues) + ")");
-            }
-            return rows;
-        }
-
-        private string endInsertTable(Table table)
-        {
-            string query =
-                "/*!40000 ALTER TABLE `" + table.Name + "` ENABLE KEYS */;\n" +
-                "UNLOCK TABLES;\n";
-            return query;
-        }
-
-        private string restoreVariables()
-        {
-            string query =
-                "/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;\n" +
-                "/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;\n" +
-                "/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n" +
-                "/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;\n" +
-                "/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;\n" +
-                "/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;\n" +
-                "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;\n" +
-                "/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;\n";
-            return query;
         }
 
         private string ticksToString(long ticks)
