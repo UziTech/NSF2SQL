@@ -52,7 +52,7 @@
             // FileRadioButton
             // 
             this.FileRadioButton.AutoSize = true;
-            this.FileRadioButton.Location = new System.Drawing.Point(195, 138);
+            this.FileRadioButton.Location = new System.Drawing.Point(355, 89);
             this.FileRadioButton.Name = "FileRadioButton";
             this.FileRadioButton.Size = new System.Drawing.Size(99, 36);
             this.FileRadioButton.TabIndex = 2;
@@ -77,7 +77,7 @@
             "SQL Server (T-SQL)"});
             this.ServerTypeComboBox.Location = new System.Drawing.Point(195, 10);
             this.ServerTypeComboBox.Name = "ServerTypeComboBox";
-            this.ServerTypeComboBox.Size = new System.Drawing.Size(493, 39);
+            this.ServerTypeComboBox.Size = new System.Drawing.Size(352, 39);
             this.ServerTypeComboBox.TabIndex = 4;
             // 
             // label2
@@ -92,9 +92,9 @@
             // btnOK
             // 
             this.btnOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.btnOK.Location = new System.Drawing.Point(206, 207);
+            this.btnOK.Location = new System.Drawing.Point(19, 151);
             this.btnOK.Name = "btnOK";
-            this.btnOK.Size = new System.Drawing.Size(116, 46);
+            this.btnOK.Size = new System.Drawing.Size(259, 46);
             this.btnOK.TabIndex = 6;
             this.btnOK.Text = "OK";
             this.btnOK.UseVisualStyleBackColor = true;
@@ -102,9 +102,9 @@
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(394, 207);
+            this.btnCancel.Location = new System.Drawing.Point(288, 151);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(116, 46);
+            this.btnCancel.Size = new System.Drawing.Size(259, 46);
             this.btnCancel.TabIndex = 7;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
@@ -115,7 +115,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(16F, 31F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(717, 274);
+            this.ClientSize = new System.Drawing.Size(574, 225);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.label2);
@@ -123,6 +123,7 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.FileRadioButton);
             this.Controls.Add(this.ServerRadioButton);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Name = "ExportTarget";
             this.Text = "Export SQL";
             this.ResumeLayout(false);

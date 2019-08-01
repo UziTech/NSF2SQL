@@ -26,7 +26,6 @@ C:\Users\tjbrix\Google Drive\Tonys Stuff\Projects\CS\NSF2SQL\NSF2SQL\obj\Debug\N
 C:\dev\NSF2SQL\NSF2SQL\bin\Debug\NSF2SQL.exe.config
 C:\dev\NSF2SQL\NSF2SQL\bin\Debug\NSF2SQL.exe
 C:\dev\NSF2SQL\NSF2SQL\bin\Debug\NSF2SQL.pdb
-C:\dev\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.csprojAssemblyReference.cache
 C:\dev\NSF2SQL\NSF2SQL\obj\Debug\Interop.Domino.dll
 C:\dev\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.csproj.ResolveComReference.cache
 C:\dev\NSF2SQL\NSF2SQL\obj\Debug\NSF2SQL.Form1.resources
