@@ -38,12 +38,17 @@
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.label1 = new System.Windows.Forms.Label();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
+            this.btnBrowseAttachmentsFolder = new System.Windows.Forms.Button();
+            this.gpbAttachments = new System.Windows.Forms.GroupBox();
+            this.txbAttachmentsFolder = new System.Windows.Forms.TextBox();
+            this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
+            this.gpbAttachments.SuspendLayout();
             this.SuspendLayout();
             // 
             // bGetDatabases
             // 
             this.bGetDatabases.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.bGetDatabases.Location = new System.Drawing.Point(11, 257);
+            this.bGetDatabases.Location = new System.Drawing.Point(11, 278);
             this.bGetDatabases.Name = "bGetDatabases";
             this.bGetDatabases.Size = new System.Drawing.Size(123, 23);
             this.bGetDatabases.TabIndex = 2;
@@ -54,7 +59,7 @@
             // bExportDocuments
             // 
             this.bExportDocuments.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.bExportDocuments.Location = new System.Drawing.Point(269, 257);
+            this.bExportDocuments.Location = new System.Drawing.Point(269, 278);
             this.bExportDocuments.Name = "bExportDocuments";
             this.bExportDocuments.Size = new System.Drawing.Size(123, 23);
             this.bExportDocuments.TabIndex = 4;
@@ -65,7 +70,7 @@
             // bBrowse
             // 
             this.bBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.bBrowse.Location = new System.Drawing.Point(140, 257);
+            this.bBrowse.Location = new System.Drawing.Point(140, 278);
             this.bBrowse.Name = "bBrowse";
             this.bBrowse.Size = new System.Drawing.Size(123, 23);
             this.bBrowse.TabIndex = 3;
@@ -94,7 +99,7 @@
             this.treeView1.ShowNodeToolTips = true;
             this.treeView1.ShowPlusMinus = false;
             this.treeView1.ShowRootLines = false;
-            this.treeView1.Size = new System.Drawing.Size(380, 226);
+            this.treeView1.Size = new System.Drawing.Size(380, 188);
             this.treeView1.TabIndex = 1;
             this.treeView1.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseDoubleClick);
             // 
@@ -120,11 +125,46 @@
             this.saveFileDialog1.FileName = "export.sql";
             this.saveFileDialog1.Filter = "SQL File|*.sql";
             // 
+            // btnBrowseAttachmentsFolder
+            // 
+            this.btnBrowseAttachmentsFolder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnBrowseAttachmentsFolder.Location = new System.Drawing.Point(6, 24);
+            this.btnBrowseAttachmentsFolder.Name = "btnBrowseAttachmentsFolder";
+            this.btnBrowseAttachmentsFolder.Size = new System.Drawing.Size(40, 23);
+            this.btnBrowseAttachmentsFolder.TabIndex = 7;
+            this.btnBrowseAttachmentsFolder.Text = "...";
+            this.btnBrowseAttachmentsFolder.UseVisualStyleBackColor = true;
+            this.btnBrowseAttachmentsFolder.Click += new System.EventHandler(this.btnBrowseAttachmentsFolder_Click);
+            // 
+            // gpbAttachments
+            // 
+            this.gpbAttachments.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.gpbAttachments.Controls.Add(this.txbAttachmentsFolder);
+            this.gpbAttachments.Controls.Add(this.btnBrowseAttachmentsFolder);
+            this.gpbAttachments.Location = new System.Drawing.Point(15, 219);
+            this.gpbAttachments.Name = "gpbAttachments";
+            this.gpbAttachments.Size = new System.Drawing.Size(377, 53);
+            this.gpbAttachments.TabIndex = 8;
+            this.gpbAttachments.TabStop = false;
+            this.gpbAttachments.Text = "Select directory for attachments";
+            // 
+            // txbAttachmentsFolder
+            // 
+            this.txbAttachmentsFolder.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txbAttachmentsFolder.Location = new System.Drawing.Point(53, 26);
+            this.txbAttachmentsFolder.Name = "txbAttachmentsFolder";
+            this.txbAttachmentsFolder.ReadOnly = true;
+            this.txbAttachmentsFolder.Size = new System.Drawing.Size(318, 20);
+            this.txbAttachmentsFolder.TabIndex = 8;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(404, 289);
+            this.ClientSize = new System.Drawing.Size(404, 310);
+            this.Controls.Add(this.gpbAttachments);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.treeView1);
             this.Controls.Add(this.bBrowse);
@@ -134,6 +174,8 @@
             this.MinimumSize = new System.Drawing.Size(420, 167);
             this.Name = "Form1";
             this.Text = "NSF 2 SQL";
+            this.gpbAttachments.ResumeLayout(false);
+            this.gpbAttachments.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -149,6 +191,10 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
+        private System.Windows.Forms.Button btnBrowseAttachmentsFolder;
+        private System.Windows.Forms.GroupBox gpbAttachments;
+        private System.Windows.Forms.TextBox txbAttachmentsFolder;
+        private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
     }
 }
 

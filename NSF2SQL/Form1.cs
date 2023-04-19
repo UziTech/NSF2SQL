@@ -326,6 +326,11 @@ namespace NSF2SQL
                 MessageBox.Show("Select a database.");
                 return;
             }
+            if (string.IsNullOrEmpty(txbAttachmentsFolder.Text))
+            {
+                MessageBox.Show("Select a folder for attachments.");
+                return;
+            }
             int total = 0;
             long startTicks = 0;
             long lastTicks = 0;
@@ -361,6 +366,23 @@ namespace NSF2SQL
                     startTicks = DateTime.Now.Ticks;
                     for (int i = 0; i < total; i++)
                     {
+                        object[] items = (object[])doc.Items;
+
+                        foreach (NotesItem nItem in items)
+                        {
+                            if (nItem.Name == "$FILE")
+                            {
+                                NotesItem file = doc.GetFirstItem("$File");
+
+                                string fileName = ((object[])nItem.Values)[0].ToString();
+
+                                NotesEmbeddedObject attachfile = doc.GetAttachment(fileName);
+
+                                if (attachfile != null)
+                                    attachfile.ExtractFile($@"{txbAttachmentsFolder.Text}\{fileName}");
+                            }
+                        }
+
                         //check if cancelled
                         if (pDialog.IsCancelled)
                         {
@@ -829,6 +851,12 @@ namespace NSF2SQL
             NotesSession nSession = new NotesSession();
             nSession.Initialize(password);
             return nSession;
+        }
+
+        private void btnBrowseAttachmentsFolder_Click(object sender, EventArgs e)
+        {
+            if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
+                txbAttachmentsFolder.Text = folderBrowserDialog1.SelectedPath;            
         }
     }
 }
