@@ -367,20 +367,22 @@ namespace NSF2SQL
                     for (int i = 0; i < total; i++)
                     {
                         object[] items = (object[])doc.Items;
-
+                        if (items!=null) {
                         foreach (NotesItem nItem in items)
-                        {
-                            if (nItem.Name == "$FILE")
                             {
-                                NotesItem file = doc.GetFirstItem("$File");
+                                if (nItem.Name == "$FILE")
+                                {
+                                    NotesItem file = doc.GetFirstItem("$File");
 
-                                string fileName = ((object[])nItem.Values)[0].ToString();
+                                    string fileName = ((object[])nItem.Values)[0].ToString();
 
-                                NotesEmbeddedObject attachfile = doc.GetAttachment(fileName);
+                                    NotesEmbeddedObject attachfile = doc.GetAttachment(fileName);
 
-                                if (attachfile != null)
-                                    attachfile.ExtractFile($@"{txbAttachmentsFolder.Text}\{fileName}");
+                                    if (attachfile != null)
+                                        attachfile.ExtractFile($@"{txbAttachmentsFolder.Text}\{fileName}");
+                                }
                             }
+
                         }
 
                         //check if cancelled
