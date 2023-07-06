@@ -89,6 +89,10 @@ USE [{0}];", databaseName);
                                         {
                                             value = "NULL";
                                         }
+                                        else
+                                        {
+                                            value = value.ToString().Replace(",", ".");
+                                        }
                                     }
                                     break;
                                 case "datetime":
