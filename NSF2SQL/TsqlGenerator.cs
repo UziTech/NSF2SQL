@@ -28,7 +28,7 @@ USE [{0}];", databaseName);
         {
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.AppendFormat("CREATE TABLE [{0}] (\r\n", table.Name);
-            sqlBuilder.AppendLine("[id] INT NOT NULL,");
+            sqlBuilder.AppendLine("[LotusDocNr] INT NOT NULL,");
             foreach (Column column in table.Columns.Values)
             {
                 sqlBuilder.AppendFormat("[{0}] {1} NULL,\r\n", column.Name, column.Type);
@@ -51,7 +51,7 @@ USE [{0}];", databaseName);
         public string BeginInsertTable(Table table)
         {
             StringBuilder sqlBuilder = new StringBuilder();
-            sqlBuilder.AppendFormat("INSERT INTO [{0}] ([id],[", table.Name);
+            sqlBuilder.AppendFormat("INSERT INTO [{0}] ([LotusDocNr],[", table.Name);
             sqlBuilder.Append(string.Join("],\r\n[", table.Columns.Keys));
             sqlBuilder.AppendLine("]) VALUES");
 
@@ -113,7 +113,7 @@ USE [{0}];", databaseName);
                                             {
                                                 value = temp.ToString("yyyy-MM-dd HH:mm:ss");
                                             }
-                                            value = "'" + value + "'";
+                                            value = "'" + value.ToString().Replace("-", "") + "'";
                                         }
                                         else
                                         {
