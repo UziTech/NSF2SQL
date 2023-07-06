@@ -52,7 +52,7 @@ USE [{0}];", databaseName);
         {
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.AppendFormat("INSERT INTO [{0}] ([id],[", table.Name);
-            sqlBuilder.Append(string.Join("],[", table.Columns.Keys));
+            sqlBuilder.Append(string.Join("],\r\n[", table.Columns.Keys));
             sqlBuilder.AppendLine("]) VALUES");
 
             return sqlBuilder.ToString();
@@ -137,7 +137,7 @@ USE [{0}];", databaseName);
                         columnValues.Add("NULL");
                     }
                 }
-                rows.Add("(" + (i + 1) + "," + String.Join(",", columnValues) + ")");
+                rows.Add("(" + (i + 1) + "," + String.Join(",\r\n", columnValues) + ")");
             }
             return rows;
         }
