@@ -389,10 +389,10 @@ namespace NSF2SQL
                             e.Cancel = true;
                             return;
                         }
-                        if (doc.HasItem("Form") && (string)doc.GetItemValue("Form")[0] != "")
+                        if (doc.HasItem("Form") && ((string[])doc.GetItemValue("Form"))[0] != "")
                         {
                             //get form
-                            string form = (string)doc.GetItemValue("Form")[0];
+                            string form = ((string[])doc.GetItemValue("Form"))[0];
                             
                             if (!tables.ContainsKey(form))
                             {
@@ -401,7 +401,7 @@ namespace NSF2SQL
                             int row = tables[form].AddRow();
                             //get fields
                             //set multiple values
-                            foreach (NotesItem item in doc.Items)
+                            foreach (NotesItem item in (NotesItem[])doc.Items)
                             {
                                 //check if cancelled
                                 if (pDialog.IsCancelled)
@@ -429,7 +429,7 @@ namespace NSF2SQL
                                         break;
                                 }
                                 object values = item.Values;
-                                bool multiple = item.Values.Length > 1;
+                                bool multiple = ((object[])item.Values).Length > 1;
 
                                 if (!tables[form].Columns.ContainsKey(field))
                                 {
