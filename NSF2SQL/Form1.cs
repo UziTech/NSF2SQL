@@ -326,11 +326,16 @@ namespace NSF2SQL
                 MessageBox.Show("Select a database.");
                 return;
             }
-            if (string.IsNullOrEmpty(txbAttachmentsFolder.Text))
+
+            string attachmentsFolder = txbAttachmentsFolder.Text;
+
+            if (string.IsNullOrEmpty(attachmentsFolder))
             {
-                MessageBox.Show("Select a folder for attachments.");
-                return;
+                var result = MessageBox.Show("You did not select a destination for attachments. The export will proceed without pulling any of those fields. Cancel to select a folder.", "Notice", buttons: MessageBoxButtons.OKCancel);
+
+                if (result == DialogResult.Cancel) return;
             }
+
             int total = 0;
             long startTicks = 0;
             long lastTicks = 0;
@@ -367,19 +372,21 @@ namespace NSF2SQL
                     for (int i = 0; i < total; i++)
                     {
                         object[] items = (object[])doc.Items;
-
-                        foreach (NotesItem nItem in items)
+                        if (!string.IsNullOrWhiteSpace(attachmentsFolder))
                         {
-                            if (nItem.Name == "$FILE")
+                            foreach (NotesItem nItem in items)
                             {
-                                NotesItem file = doc.GetFirstItem("$File");
+                                if (nItem.Name == "$FILE")
+                                {
+                                    NotesItem file = doc.GetFirstItem("$File");
 
-                                string fileName = ((object[])nItem.Values)[0].ToString();
+                                    string fileName = ((object[])nItem.Values)[0].ToString();
 
-                                NotesEmbeddedObject attachfile = doc.GetAttachment(fileName);
+                                    NotesEmbeddedObject attachfile = doc.GetAttachment(fileName);
 
-                                if (attachfile != null)
-                                    attachfile.ExtractFile($@"{txbAttachmentsFolder.Text}\{fileName}");
+                                    if (attachfile != null)
+                                        attachfile.ExtractFile($@"{attachmentsFolder}\{fileName}");
+                                }
                             }
                         }
 
@@ -393,7 +400,7 @@ namespace NSF2SQL
                         {
                             //get form
                             string form = ((string[])doc.GetItemValue("Form"))[0];
-                            
+
                             if (!tables.ContainsKey(form))
                             {
                                 tables.Add(form, new Table(form));
@@ -856,7 +863,7 @@ namespace NSF2SQL
         private void btnBrowseAttachmentsFolder_Click(object sender, EventArgs e)
         {
             if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
-                txbAttachmentsFolder.Text = folderBrowserDialog1.SelectedPath;            
+                txbAttachmentsFolder.Text = folderBrowserDialog1.SelectedPath;
         }
     }
 }
