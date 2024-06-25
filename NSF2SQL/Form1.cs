@@ -396,47 +396,71 @@ namespace NSF2SQL
                             e.Cancel = true;
                             return;
                         }
-                        if (doc.HasItem("Form") && ((string[])doc.GetItemValue("Form"))[0] != "")
-                        {
-                            //get form
-                            string form = ((string[])doc.GetItemValue("Form"))[0];
 
-                            if (!tables.ContainsKey(form))
+                        //get form
+                        object formObj = doc.HasItem("Form") ? doc.GetItemValue("Form") : null;
+                        string form = formObj is string ? (string)formObj : (formObj is string[] ? ((string[])formObj)[0] : "table");
+
+                        if (!tables.ContainsKey(form))
+                        {
+                            tables.Add(form, new Table(form));
+                        }
+                        int row = tables[form].AddRow();
+                        //get fields
+                        //set multiple values
+                        foreach (NotesItem item in (NotesItem[])doc.Items)
+                        {
+                            //check if cancelled
+                            if (pDialog.IsCancelled)
                             {
-                                tables.Add(form, new Table(form));
+                                e.Cancel = true;
+                                return;
                             }
-                            int row = tables[form].AddRow();
-                            //get fields
-                            //set multiple values
-                            foreach (NotesItem item in (NotesItem[])doc.Items)
+                            string field = item.Name;
+                            //exclude fields that start with $ and the Form field and Readers field
+                            if (field == null || excludeField.IsMatch(field))
                             {
-                                //check if cancelled
-                                if (pDialog.IsCancelled)
+                                continue;
+                            }
+                            string type = "";
+                            switch (item.type)
+                            {//TODO: get more types
+                                case IT_TYPE.NUMBERS:
+                                    type = "decimal(20,10)";
+                                    break;
+                                case IT_TYPE.DATETIMES:
+                                    type = "datetime";
+                                    break;
+                                default:
+                                    type = "text";
+                                    break;
+                            }
+                            object values = item.Values;
+                            bool multiple = ((object[])item.Values).Length > 1;
+
+                            if (!tables[form].Columns.ContainsKey(field))
+                            {
+                                tables[form].Columns.Add(field, new Column(field, type));
+                            }
+
+                            if (multiple && !tables[form].Columns[field].MultipleValues)
+                            {
+                                tables[form].Columns[field].MultipleValues = multiple;
+                            }
+
+                            if (!tables[form].Columns[field].Values.ContainsKey(row))
+                            {
+                                tables[form].Columns[field].Values.Add(row, values);
+                            }
+                            else
+                            {
+                                int j = 1;
+                                while (tables[form].Columns.ContainsKey(field + j) && tables[form].Columns[field + j].Values.ContainsKey(row))
                                 {
-                                    e.Cancel = true;
-                                    return;
+                                    j++;
                                 }
-                                string field = item.Name;
-                                //exclude fields that start with $ and the Form field and Readers field
-                                if (field == null || excludeField.IsMatch(field))
-                                {
-                                    continue;
-                                }
-                                string type = "";
-                                switch (item.type)
-                                {//TODO: get more types
-                                    case IT_TYPE.NUMBERS:
-                                        type = "decimal(20,10)";
-                                        break;
-                                    case IT_TYPE.DATETIMES:
-                                        type = "datetime";
-                                        break;
-                                    default:
-                                        type = "text";
-                                        break;
-                                }
-                                object values = item.Values;
-                                bool multiple = ((object[])item.Values).Length > 1;
+
+                                field += j;
 
                                 if (!tables[form].Columns.ContainsKey(field))
                                 {
@@ -448,32 +472,7 @@ namespace NSF2SQL
                                     tables[form].Columns[field].MultipleValues = multiple;
                                 }
 
-                                if (!tables[form].Columns[field].Values.ContainsKey(row))
-                                {
-                                    tables[form].Columns[field].Values.Add(row, values);
-                                }
-                                else
-                                {
-                                    int j = 1;
-                                    while (tables[form].Columns.ContainsKey(field + j) && tables[form].Columns[field + j].Values.ContainsKey(row))
-                                    {
-                                        j++;
-                                    }
-
-                                    field += j;
-
-                                    if (!tables[form].Columns.ContainsKey(field))
-                                    {
-                                        tables[form].Columns.Add(field, new Column(field, type));
-                                    }
-
-                                    if (multiple && !tables[form].Columns[field].MultipleValues)
-                                    {
-                                        tables[form].Columns[field].MultipleValues = multiple;
-                                    }
-
-                                    tables[form].Columns[field].Values.Add(row, values);
-                                }
+                                tables[form].Columns[field].Values.Add(row, values);
                             }
                         }
                         //update progress
