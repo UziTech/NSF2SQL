@@ -396,11 +396,9 @@ namespace NSF2SQL
                             e.Cancel = true;
                             return;
                         }
-                        if (doc.HasItem("Form") && ((string[])doc.GetItemValue("Form"))[0] != "")
+                        string form = getForm(doc);
+                        if (form != "")
                         {
-                            //get form
-                            string form = ((string[])doc.GetItemValue("Form"))[0];
-
                             if (!tables.ContainsKey(form))
                             {
                                 tables.Add(form, new Table(form));
@@ -841,6 +839,23 @@ namespace NSF2SQL
             {
                 bExportDocuments_Click(sender, e);
             }
+        }
+
+        private string getForm(NotesDocument doc)
+        {
+          if (!doc.HasItem("Form"))
+          {
+            return "";
+          }
+
+          var formItems = doc.GetItemValue("Form");
+
+          if (!formItems.GetType().IsArray)
+          {
+            return "";
+          }
+
+          return ((object[])formItems)[0].ToString();
         }
 
         private string ticksToString(long ticks)
